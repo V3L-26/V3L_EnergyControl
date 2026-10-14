@@ -10,16 +10,13 @@
 # volledig losse acties - zo houdt een trage of al-uitstaande unit de
 # andere twee niet op.
 #
-# BELANGRIJKE FIX t.o.v. eerdere versies: het uit-commando werd eerst
-# direct na het triggeren verstuurd, zonder de status van de Daikin
-# Onecta-cloud te verversen. Herhaald handmatig testen (op de
-# woonkamer-unit) wees uit dat het uit-commando dan vaak niet aankwam -
-# de integratie lijkt het commando op te bouwen op basis van de laatst
-# bekende (gecachte) status, en die kan verouderd zijn. Deze
-# automatisering drukt daarom eerst op de refresh-knop van deze
-# Daikin-unit, en wacht (met een timeout van 30 seconden als vangnet, via
-# continue_on_timeout) tot de last_updated van de climate-entiteit
-# daadwerkelijk verandert, voordat het uit-commando wordt verstuurd.
+# EERDERE FIX (vervallen, zie UPDATE 14 oktober 2026 hieronder): het
+# uit-commando werd eerst direct na het triggeren verstuurd, zonder de
+# status van de Daikin Onecta-cloud te verversen. Herhaald handmatig
+# testen (op de woonkamer-unit) wees uit dat het uit-commando dan vaak
+# niet aankwam, dus werd hier een refresh-knop-druk + wachten op een
+# bijgewerkte status (met een vangnet-timeout van 30 seconden) vóór het
+# uit-commando toegevoegd.
 #
 # INCIDENT EN FIX (25 september 2026): de trigger-target combineerde
 # eerder area_id: meterkast met de specifieke entity_id
@@ -33,8 +30,8 @@
 # dat moment nog geen 4000 W trok. Fix: area_id is verwijderd uit de
 # trigger-target; alleen de specifieke entity_id blijft over. Toegepast
 # bij alle drie de automatiseringen (woonkamer, Christian, Jason). Dit
-# incident bevestigde meteen ook dat de uitschakel-actie zelf (refresh +
-# wait + uit-commando) voor deze unit werkt.
+# incident bevestigde meteen ook dat de uitschakel-actie zelf (destijds
+# nog refresh + wait + uit-commando) voor deze unit werkt.
 #
 # UPDATE (1 oktober 2026): een vergelijkbare automatisering op fase 2
 # (vaatwasser) schakelde terecht af bij een echte maar zeer kortstondige
@@ -55,10 +52,6 @@
 # en de bijbehorende helper (input_text.airco_overload_uitgezet) zijn
 # hiermee vervallen en niet meer nodig.
 #
-# Volgt hetzelfde patroon als de geteste woonkamer-versie; trigger-target-
-# fix toegepast 25 september 2026; ontdendering + logging toegevoegd 1
-# oktober 2026.
-#
 # UPDATE (1 oktober 2026, later): de overbelastingsgrens is sinds app-versie
 # 3.70 instelbaar IN DE V3L-APP in plaats van hier vastgelegd. De trigger
 # hieronder reageert daarom op een vaste, lage bodemwaarde (4000 W, de
@@ -67,6 +60,28 @@
 # door de gebruiker gekozen - grens in de helper input_number.p1_overload_w,
 # die wordt bijgewerkt door automations/instellingen-uit-supabase.yaml. Zie
 # app/CHANGELOG.md 3.70.
+#
+# UPDATE (14 oktober 2026): de refresh+wait-aanpak hierboven kon in het
+# slechtste geval tot 30 seconden duren vóórdat het uit-commando
+# überhaupt werd verstuurd - te traag voor een beveiliging die juist
+# bedoeld is om binnen enkele seconden in te grijpen. climate.set_hvac_mode
+# met hvac_mode 'off' is echter een absoluut commando (geen relatieve
+# wijziging t.o.v. de huidige stand), dus het hoeft niet te wachten op een
+# verse status om correct te zijn - het probleem zat 'm in het commando
+# dat soms niet aankwam bij de Daikin-cloud, niet in een verkeerde
+# interpretatie ervan door Home Assistant. Daarom is de refresh/wait_template
+# vervangen door het uit-commando drie keer te versturen met 3 seconden
+# ertussen (in plaats van één keer te wachten tot 30 seconden): in het
+# gangbare geval is de airco nu al na ~5 seconden (alleen de ontdendering)
+# uit, en in het slechtste geval na ~11 seconden in plaats van tot 35
+# seconden. Nog niet getest in de praktijk (stand: 14 oktober 2026) - bij
+# een eerstvolgende daadwerkelijke afschakeling even in de HA-trace
+# controleren of de airco na de eerste poging al uit staat.
+#
+# Volgt hetzelfde patroon als de woonkamer-versie; trigger-target-fix
+# toegepast 25 september 2026; ontdendering + logging toegevoegd 1
+# oktober 2026; refresh+wait vervangen door herhaald uit-commando 14
+# oktober 2026.
 #
 # Documentatiekopie - de echte automatisering staat in Home Assistant zelf.
 
@@ -89,23 +104,28 @@ actions:
   - condition: template
     value_template: "{{ states('sensor.p1_meter_vermogen_fase_3') | float(0) > (states('input_number.p1_overload_w') | float(5000)) }}"
   - variables:
-      voor_refresh: "{{ states.climate.daikinap86096_room_temperature.last_updated }}"
       overload_watt: "{{ states('sensor.p1_meter_vermogen_fase_3') | float(0) }}"
       overload_threshold: "{{ states('input_number.p1_overload_w') | float(5000) }}"
-  - action: button.press
-    target:
-      entity_id: button.daikinap86096_refresh
-    data: {}
-  - wait_template: "{{ states.climate.daikinap86096_room_temperature.last_updated != voor_refresh }}"
-    timeout:
-      seconds: 30
-    continue_on_timeout: true
   - action: climate.set_hvac_mode
     target:
       device_id: 16975c6c2948a23cafb485400b1ee91e
     data:
       hvac_mode: 'off'
-    alias: Airco uitschakelen
+    alias: Airco uitschakelen (poging 1)
+  - delay: '00:00:03'
+  - action: climate.set_hvac_mode
+    target:
+      device_id: 16975c6c2948a23cafb485400b1ee91e
+    data:
+      hvac_mode: 'off'
+    alias: Airco uitschakelen (poging 2, voor de zekerheid)
+  - delay: '00:00:03'
+  - action: climate.set_hvac_mode
+    target:
+      device_id: 16975c6c2948a23cafb485400b1ee91e
+    data:
+      hvac_mode: 'off'
+    alias: Airco uitschakelen (poging 3, voor de zekerheid)
   - action: notify.send_message
     target:
       entity_id: notify.samsung_s23
