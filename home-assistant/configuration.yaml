@@ -1,7 +1,7 @@
 # Home Assistant configuration.yaml - V3L EnergyControl / V3L HomeWizard
 #
 # Dit is een documentatie-/herstelkopie van het rest_command-blok zoals het
-# op 1 oktober 2026 in Arjan's eigen Home Assistant staat. Home Assistant
+# op 21 oktober 2026 in Arjan's eigen Home Assistant staat. Home Assistant
 # zelf blijft de bron van waarheid; wijzig het daar en werk deze kopie
 # handmatig bij. De geheimen (!secret ...) staan in secrets.yaml, dat NIET
 # in deze repository hoort (zie home-assistant/secrets.yaml.example).
@@ -166,15 +166,23 @@ rest_command:
       Prefer: "resolution=merge-duplicates,return=minimal"
     payload: '{"field_id":"{{ field }}","value":"{{ value }}","updated_at":"{{ now().isoformat() }}"}'
 
-  # Haalt de overbelastingsgrens en de tarieven op uit app_settings - het
-  # omgekeerde van supabase_set_setting hierboven. Sinds app-versie 3.70
-  # stelt de V3L-app deze drie waarden zelf in (zie app/CHANGELOG.md);
-  # Home Assistant haalt ze hiermee op. Aangeroepen door
-  # automations/instellingen-uit-supabase.yaml met variabele "token"; het
-  # antwoord komt terug via response_variable (settings['content'] is een
-  # lijst van {field_id, value}-objecten).
+  # Haalt de overbelastingsgrens, de tarieven en de gewenste
+  # woonkamertemperatuur op uit app_settings - het omgekeerde van
+  # supabase_set_setting hierboven. Sinds app-versie 3.70 stelt de V3L-app
+  # de overbelastingsgrens/tarieven zelf in; sinds 3.72 ook de gewenste
+  # temperatuur (p1_target_temp, zie app/CHANGELOG.md) - zie
+  # automations/instellingen-uit-supabase.yaml, die deze rest_command
+  # aanroept met variabele "token"; het antwoord komt terug via
+  # response_variable (settings['content'] is een lijst van
+  # {field_id, value}-objecten).
+  #
+  # UPDATE 21 oktober 2026: p1_target_temp ontbrak in de field_id=in.(...)
+  # filter hieronder, waardoor de automatisering 'm nooit kon lezen (de
+  # waarde kwam dus nooit aan in input_text.woonkamertemperatuur, ook niet
+  # nadat de automatisering zelf al was bijgewerkt om 'm te verwerken) -
+  # toegevoegd.
   supabase_get_app_settings:
-    url: "https://sdkzzjrtmtzfvjrgpqbm.supabase.co/rest/v1/app_settings?select=field_id,value&field_id=in.(p1_overload_w,p1_elec_price,p1_gas_price)"
+    url: "https://sdkzzjrtmtzfvjrgpqbm.supabase.co/rest/v1/app_settings?select=field_id,value&field_id=in.(p1_overload_w,p1_elec_price,p1_gas_price,p1_target_temp)"
     method: get
     headers:
       apikey: !secret supabase_anon_key
