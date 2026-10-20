@@ -1,0 +1,45 @@
+# Automatisering "Airco-stand woonkamer naar Supabase sturen"
+#
+# Sinds app-versie 3.74 toont de thermostaat-tegel in de V3L-app "OFF" in
+# plaats van de ingestelde temperatuur zolang de airco in de woonkamer
+# uitstaat (zie app/index.html, functie renderAirconMode()). Die tegel
+# leest daarvoor app_settings.p1_aircon_mode uit Supabase (zelfde patroon
+# als p1_current_temp, zie actuele-temperatuur-naar-supabase.yaml).
+#
+# Deze automatisering stuurt die waarde: de ruwe HA-status van
+# climate.daikinap46344_room_temperature (hetzelfde entity dat de
+# bestaande airco-woonkamer-*.yaml-automatiseringen ook al gebruiken om te
+# bepalen of de airco aanstaat - 'off' als hij uitstaat, anders 'cool',
+# 'heat', 'auto', etc.) naar app_settings via de al bestaande
+# rest_command.supabase_set_setting.
+#
+# Bewust alleen periodiek gepolld (elke 2 minuten), geen state-trigger op
+# de climate-entiteit zelf - zie de toelichting ("ONTWERPGESCHIEDENIS") in
+# airco-woonkamer-geblokkeerd-nacht.yaml: een kale state-trigger op deze
+# entiteit vuurt op elke attribuutwijziging (bijv. een kale
+# temperatuurupdate), niet alleen op een echte aan/uit-wisseling. Voor dit
+# alleen-lezen doel (geen sturing, dus geen refresh+wait_template-patroon
+# nodig zoals bij de andere airco-automatiseringen) is 2 minuten vertraging
+# ruim voldoende.
+#
+# 21 oktober 2026: nieuw, nog niet getest in de praktijk.
+#
+# Documentatiekopie - de echte automatisering staat in Home Assistant zelf.
+
+alias: Airco-stand woonkamer naar Supabase sturen
+description: Stuurt de aan/uit-stand van de woonkamer-airco naar app_settings (p1_aircon_mode), zodat de V3L-app "OFF" kan tonen i.p.v. de ingestelde temperatuur
+triggers:
+  - trigger: time_pattern
+    minutes: "/2"
+  - trigger: homeassistant
+    event: start
+conditions: []
+actions:
+  - action: rest_command.supabase_login
+    response_variable: login
+  - action: rest_command.supabase_set_setting
+    data:
+      token: "{{ login['content']['access_token'] }}"
+      field: p1_aircon_mode
+      value: "{{ states('climate.daikinap46344_room_temperature') }}"
+mode: single
