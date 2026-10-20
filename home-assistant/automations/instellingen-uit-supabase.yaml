@@ -5,18 +5,26 @@
 # plaats van Home Assistant. Deze automatisering doet het omgekeerde van de
 # oude "Prijzen naar Supabase" (die HA -> Supabase stuurde; die
 # automatisering is vervallen, zie git-historie van dit bestand): hij haalt
-# app_settings (p1_overload_w / p1_elec_price / p1_gas_price) op uit
-# Supabase en zet de bijbehorende HA-helpers daarmee gelijk, zodat de
-# bestaande overbelastings-automatiseringen en de HA-kostenberekening ook
-# de in de app ingestelde waarden gebruiken.
+# app_settings op uit Supabase en zet de bijbehorende HA-helpers daarmee
+# gelijk, zodat de bestaande overbelastings-automatiseringen en de
+# HA-kostenberekening ook de in de app ingestelde waarden gebruiken.
 #
-# Vereist drie helpers (Instellingen > Apparaten en diensten > Hulpmiddelen
-# > Nummer). input_number.stroomprijs en input_number.gasprijs bestonden al
-# (zie de vervallen "Prijzen naar Supabase"); input_number.p1_overload_w is
-# nieuw:
-#   - input_number.p1_overload_w   min 4000, max 5750, step 50, eenheid W
-#   - input_number.stroomprijs     (bestond al)
-#   - input_number.gasprijs        (bestond al)
+# UPDATE 20 oktober 2026: de V3L-app heeft sinds versie 3.72 een
+# thermostaat-tegel waarmee de gewenste woonkamertemperatuur wordt
+# ingesteld (app_settings.p1_target_temp). Die waarde wordt hieronder ook
+# opgehaald en doorgezet naar de nieuwe helper
+# input_text.woonkamertemperatuur (zelfde patroon als de overige
+# instellingen: alleen schrijven als de waarde afwijkt).
+#
+# Vereist de volgende helpers (Instellingen > Apparaten en diensten >
+# Hulpmiddelen). input_number.stroomprijs en input_number.gasprijs
+# bestonden al (zie de vervallen "Prijzen naar Supabase");
+# input_number.p1_overload_w en input_text.woonkamertemperatuur zijn
+# nieuwer:
+#   - input_number.p1_overload_w      min 4000, max 5750, step 50, eenheid W
+#   - input_number.stroomprijs        (bestond al)
+#   - input_number.gasprijs           (bestond al)
+#   - input_text.woonkamertemperatuur (type Tekst, max length voldoende voor bv. "18.0")
 #
 # Let op: de overbelastings-automatiseringen zelf (overbelasting-melding.yaml,
 # airco-*-fase3.yaml, fase1-cascade-*.yaml, fase2-vaatwasser-*.yaml,
@@ -24,12 +32,12 @@
 # in plaats van de vaste waarde 5000 - zie de UPDATE-opmerking van
 # 1 oktober 2026 (later) in elk van die bestanden.
 #
-# Nog niet getest in de praktijk (stand: 1 oktober 2026).
+# Nog niet getest in de praktijk (stand: 20 oktober 2026).
 #
 # Documentatiekopie - de echte automatisering staat in Home Assistant zelf.
 
 alias: Instellingen uit Supabase ophalen
-description: Haalt overbelastingsgrens en tarieven op uit app_settings (ingesteld vanuit de V3L-app)
+description: Haalt overbelastingsgrens, tarieven en gewenste woonkamertemperatuur op uit app_settings (ingesteld vanuit de V3L-app)
 triggers:
   - trigger: time_pattern
     minutes: "/1"
@@ -48,6 +56,7 @@ actions:
       overload_w: "{{ (rows | selectattr('field_id','eq','p1_overload_w') | map(attribute='value') | list | first | default(5000)) | float(5000) }}"
       elec_price: "{{ rows | selectattr('field_id','eq','p1_elec_price') | map(attribute='value') | list | first | default(none) }}"
       gas_price: "{{ rows | selectattr('field_id','eq','p1_gas_price') | map(attribute='value') | list | first | default(none) }}"
+      target_temp: "{{ rows | selectattr('field_id','eq','p1_target_temp') | map(attribute='value') | list | first | default(none) }}"
   - if:
       - condition: template
         value_template: "{{ overload_w != (states('input_number.p1_overload_w') | float(0)) }}"
@@ -75,4 +84,13 @@ actions:
           entity_id: input_number.gasprijs
         data:
           value: "{{ gas_price | float }}"
+  - if:
+      - condition: template
+        value_template: "{{ target_temp is not none and (target_temp | float(-1)) != (states('input_text.woonkamertemperatuur') | float(-1)) }}"
+    then:
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.woonkamertemperatuur
+        data:
+          value: "{{ '%.1f' | format(target_temp | float) }}"
 mode: single
