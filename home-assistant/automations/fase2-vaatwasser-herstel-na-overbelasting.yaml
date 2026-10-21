@@ -8,13 +8,27 @@
 #
 # Nog niet getest in de praktijk (stand: 27 september 2026).
 #
+#
+# UPDATE (21 oktober 2026): fase 1/2/3 worden hier niet meer rechtstreeks
+# via sensor.p1_meter_vermogen_fase_N gevolgd, maar via de nieuwe
+# failover-sensoren sensor.fase_bewaking_l1/l2/l3 (zie het pakket
+# home-assistant/packages/fase-bewaking-failover.yaml). Die sensoren
+# gebruiken de HomeWizard Instant-integratie (WebSocket, sub-seconde
+# updates van de P1-meter zelf i.p.v. de ~5 sec polling van de officiele
+# integratie) als die beschikbaar is, en vallen automatisch terug op de
+# officiele HomeWizard Energy-sensor zodra de WebSocket-verbinding van
+# die integratie wegvalt. Deze automatisering zelf hoeft daar niets voor
+# te doen - ze leest gewoon de failover-sensor, die zich naar buiten toe
+# identiek gedraagt als de oude sensor (zelfde eenheid, zelfde type
+# waarden). Nog niet getest in de praktijk (stand: 21 oktober 2026).
+#
 # Documentatiekopie - de echte automatisering staat in Home Assistant zelf.
 
 alias: Fase 2 herstellen na overbelasting
 description: ''
 triggers:
   - trigger: numeric_state
-    entity_id: sensor.p1_meter_vermogen_fase_2
+    entity_id: sensor.fase_bewaking_l2
     below: 4000
     for:
       minutes: 5

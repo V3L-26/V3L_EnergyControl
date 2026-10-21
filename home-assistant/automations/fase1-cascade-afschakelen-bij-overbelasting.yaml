@@ -6,7 +6,7 @@
 # stopcontact-apparaten stap voor stap uit, in plaats van in één keer
 # alles: Magnetron -> Airfryer -> Koffiezetapparaat -> Wasmachine. Na elke
 # stap wordt de actuele fase-1-waarde opnieuw gecheckt (via een template-
-# conditie op sensor.p1_meter_vermogen_fase_1), zodat er niet meer wordt
+# conditie op sensor.fase_bewaking_l1), zodat er niet meer wordt
 # uitgeschakeld dan nodig is om weer onder de drempel te komen.
 #
 # Volgorde is bewust van minst naar meest ingrijpend: de drie kortdurende
@@ -48,6 +48,20 @@
 # Getest in de praktijk (zie README, incident 1 oktober 2026 - overigens
 # op fase 2, niet fase 1).
 #
+#
+# UPDATE (21 oktober 2026): fase 1/2/3 worden hier niet meer rechtstreeks
+# via sensor.p1_meter_vermogen_fase_N gevolgd, maar via de nieuwe
+# failover-sensoren sensor.fase_bewaking_l1/l2/l3 (zie het pakket
+# home-assistant/packages/fase-bewaking-failover.yaml). Die sensoren
+# gebruiken de HomeWizard Instant-integratie (WebSocket, sub-seconde
+# updates van de P1-meter zelf i.p.v. de ~5 sec polling van de officiele
+# integratie) als die beschikbaar is, en vallen automatisch terug op de
+# officiele HomeWizard Energy-sensor zodra de WebSocket-verbinding van
+# die integratie wegvalt. Deze automatisering zelf hoeft daar niets voor
+# te doen - ze leest gewoon de failover-sensor, die zich naar buiten toe
+# identiek gedraagt als de oude sensor (zelfde eenheid, zelfde type
+# waarden). Nog niet getest in de praktijk (stand: 21 oktober 2026).
+#
 # Documentatiekopie - de echte automatisering staat in Home Assistant zelf.
 
 alias: Fase 1 cascaderend afschakelen bij overbelasting
@@ -55,7 +69,7 @@ description: ''
 triggers:
   - trigger: power.changed
     target:
-      entity_id: sensor.p1_meter_vermogen_fase_1
+      entity_id: sensor.fase_bewaking_l1
     options:
       threshold:
         type: above
@@ -67,7 +81,7 @@ conditions: []
 actions:
   - delay: '00:00:05'
   - condition: template
-    value_template: "{{ states('sensor.p1_meter_vermogen_fase_1') | float(0) > (states('input_number.p1_overload_w') | float(5000)) }}"
+    value_template: "{{ states('sensor.fase_bewaking_l1') | float(0) > (states('input_number.p1_overload_w') | float(5000)) }}"
   - variables:
       overload_threshold: "{{ states('input_number.p1_overload_w') | float(5000) }}"
   - action: rest_command.supabase_login
@@ -87,14 +101,14 @@ actions:
         data:
           token: "{{ login['content']['access_token'] }}"
           phase: L1
-          watt: "{{ states('sensor.p1_meter_vermogen_fase_1') | float(0) }}"
+          watt: "{{ states('sensor.fase_bewaking_l1') | float(0) }}"
           threshold: "{{ overload_threshold }}"
           source: magnetron
           action: uitgeschakeld
       - delay: '00:00:05'
   - if:
       - condition: template
-        value_template: "{{ states('sensor.p1_meter_vermogen_fase_1') | float(0) > overload_threshold }}"
+        value_template: "{{ states('sensor.fase_bewaking_l1') | float(0) > overload_threshold }}"
       - condition: state
         entity_id: switch.energy_socket
         state: 'on'
@@ -109,14 +123,14 @@ actions:
         data:
           token: "{{ login['content']['access_token'] }}"
           phase: L1
-          watt: "{{ states('sensor.p1_meter_vermogen_fase_1') | float(0) }}"
+          watt: "{{ states('sensor.fase_bewaking_l1') | float(0) }}"
           threshold: "{{ overload_threshold }}"
           source: airfryer
           action: uitgeschakeld
       - delay: '00:00:05'
   - if:
       - condition: template
-        value_template: "{{ states('sensor.p1_meter_vermogen_fase_1') | float(0) > overload_threshold }}"
+        value_template: "{{ states('sensor.fase_bewaking_l1') | float(0) > overload_threshold }}"
       - condition: state
         entity_id: switch.keuken_koffiezetapparaat
         state: 'on'
@@ -131,14 +145,14 @@ actions:
         data:
           token: "{{ login['content']['access_token'] }}"
           phase: L1
-          watt: "{{ states('sensor.p1_meter_vermogen_fase_1') | float(0) }}"
+          watt: "{{ states('sensor.fase_bewaking_l1') | float(0) }}"
           threshold: "{{ overload_threshold }}"
           source: koffiezetapparaat
           action: uitgeschakeld
       - delay: '00:00:05'
   - if:
       - condition: template
-        value_template: "{{ states('sensor.p1_meter_vermogen_fase_1') | float(0) > overload_threshold }}"
+        value_template: "{{ states('sensor.fase_bewaking_l1') | float(0) > overload_threshold }}"
       - condition: state
         entity_id: switch.hal_wasmachine
         state: 'on'
@@ -153,7 +167,7 @@ actions:
         data:
           token: "{{ login['content']['access_token'] }}"
           phase: L1
-          watt: "{{ states('sensor.p1_meter_vermogen_fase_1') | float(0) }}"
+          watt: "{{ states('sensor.fase_bewaking_l1') | float(0) }}"
           threshold: "{{ overload_threshold }}"
           source: wasmachine
           action: uitgeschakeld

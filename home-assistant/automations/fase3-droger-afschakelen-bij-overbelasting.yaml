@@ -8,7 +8,7 @@
 # drempel (5000 W).
 #
 # Let op: dit staat los van de bestaande airco-overbelastingsautomatiseringen,
-# die ook op sensor.p1_meter_vermogen_fase_3 triggeren bij 5000 W - beide
+# die ook op sensor.fase_bewaking_l3 triggeren bij 5000 W - beide
 # reageren onafhankelijk op dezelfde sensor, geen conflict.
 #
 # UPDATE (1 oktober 2026): de zustautomatisering op fase 2 (vaatwasser)
@@ -33,6 +33,20 @@
 #
 # Nog niet getest in de praktijk (stand: 1 oktober 2026).
 #
+#
+# UPDATE (21 oktober 2026): fase 1/2/3 worden hier niet meer rechtstreeks
+# via sensor.p1_meter_vermogen_fase_N gevolgd, maar via de nieuwe
+# failover-sensoren sensor.fase_bewaking_l1/l2/l3 (zie het pakket
+# home-assistant/packages/fase-bewaking-failover.yaml). Die sensoren
+# gebruiken de HomeWizard Instant-integratie (WebSocket, sub-seconde
+# updates van de P1-meter zelf i.p.v. de ~5 sec polling van de officiele
+# integratie) als die beschikbaar is, en vallen automatisch terug op de
+# officiele HomeWizard Energy-sensor zodra de WebSocket-verbinding van
+# die integratie wegvalt. Deze automatisering zelf hoeft daar niets voor
+# te doen - ze leest gewoon de failover-sensor, die zich naar buiten toe
+# identiek gedraagt als de oude sensor (zelfde eenheid, zelfde type
+# waarden). Nog niet getest in de praktijk (stand: 21 oktober 2026).
+#
 # Documentatiekopie - de echte automatisering staat in Home Assistant zelf.
 
 alias: Fase 3 afschakelen bij overbelasting
@@ -40,7 +54,7 @@ description: ''
 triggers:
   - trigger: power.changed
     target:
-      entity_id: sensor.p1_meter_vermogen_fase_3
+      entity_id: sensor.fase_bewaking_l3
     options:
       threshold:
         type: above
@@ -55,9 +69,9 @@ conditions:
 actions:
   - delay: '00:00:05'
   - condition: template
-    value_template: "{{ states('sensor.p1_meter_vermogen_fase_3') | float(0) > (states('input_number.p1_overload_w') | float(5000)) }}"
+    value_template: "{{ states('sensor.fase_bewaking_l3') | float(0) > (states('input_number.p1_overload_w') | float(5000)) }}"
   - variables:
-      overload_watt: "{{ states('sensor.p1_meter_vermogen_fase_3') | float(0) }}"
+      overload_watt: "{{ states('sensor.fase_bewaking_l3') | float(0) }}"
       overload_threshold: "{{ states('input_number.p1_overload_w') | float(5000) }}"
   - action: switch.turn_off
     target:
