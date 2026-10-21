@@ -24,6 +24,18 @@ rest_command:
   # "P1-meter naar Supabase pushen"). Gebruikt nog het losstaande
   # supabase_p1_key/supabase_p1_bearer-secret-paar i.p.v. een login, omdat
   # dit al werkte voordat de overige commando's op een login overstapten.
+  #
+  # UPDATE (21 oktober 2026): active_power_w/l1_w/l2_w/l3_w lezen nu de
+  # nieuwe failover-sensoren sensor.fase_bewaking_totaal/l1/l2/l3 (zie
+  # home-assistant/packages/fase-bewaking-failover.yaml) in plaats van
+  # rechtstreeks sensor.p1_meter_vermogen(_fase_N) - zodra de HomeWizard
+  # Instant-integratie is gekoppeld, komt de live weergave in de V3L-app
+  # daardoor realtime (WebSocket) binnen in plaats van via de ~5 sec
+  # polling van de officiele integratie, met automatische terugval op de
+  # officiele sensor als Instant wegvalt. Spanning/stroom per fase en de
+  # overige velden blijven ongewijzigd rechtstreeks van de officiele
+  # sensoren komen - de Instant-integratie levert alleen vermogen, geen
+  # spanning/stroom.
   push_p1_naar_supabase:
     url: "https://sdkzzjrtmtzfvjrgpqbm.supabase.co/rest/v1/latest_status?on_conflict=id"
     method: POST
@@ -36,10 +48,10 @@ rest_command:
       {{
         {
           "id": true,
-          "active_power_w": states('sensor.p1_meter_vermogen') | float(none),
-          "active_power_l1_w": states('sensor.p1_meter_vermogen_fase_1') | float(none),
-          "active_power_l2_w": states('sensor.p1_meter_vermogen_fase_2') | float(none),
-          "active_power_l3_w": states('sensor.p1_meter_vermogen_fase_3') | float(none),
+          "active_power_w": states('sensor.fase_bewaking_totaal') | float(none),
+          "active_power_l1_w": states('sensor.fase_bewaking_l1') | float(none),
+          "active_power_l2_w": states('sensor.fase_bewaking_l2') | float(none),
+          "active_power_l3_w": states('sensor.fase_bewaking_l3') | float(none),
           "active_voltage_l1_v": states('sensor.p1_meter_spanning_fase_1') | float(none),
           "active_voltage_l2_v": states('sensor.p1_meter_spanning_fase_2') | float(none),
           "active_voltage_l3_v": states('sensor.p1_meter_spanning_fase_3') | float(none),
