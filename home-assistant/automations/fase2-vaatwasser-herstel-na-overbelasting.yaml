@@ -1,26 +1,11 @@
 # Automatisering "Fase 2 herstellen na overbelasting"
 #
-# Hoort bij fase2-vaatwasser-afschakelen-bij-overbelasting.yaml. Automatisch
-# herstel zodra fase 2 vijf minuten onder 4000 W blijft - net als de
-# andere nieuwe HomeWizard-stekker-automatiseringen, en in tegenstelling
-# tot de airco's (waar herstel handmatig is vanwege de onbetrouwbare
-# Daikin-cloud).
+# HERSTELD (21 oktober 2026) UIT JE HOME ASSISTANT-BACKUP: de vorige
+# "documentatiekopie" miste de command_webview + TTS-telefoonmelding en
+# had een andere berichttekst. Alleen de sensor is hier aangepast:
+# sensor.p1_meter_vermogen_fase_2 -> sensor.fase_bewaking_l2.
 #
-# Nog niet getest in de praktijk (stand: 27 september 2026).
-#
-#
-# UPDATE (21 oktober 2026): fase 1/2/3 worden hier niet meer rechtstreeks
-# via sensor.p1_meter_vermogen_fase_N gevolgd, maar via de nieuwe
-# failover-sensoren sensor.fase_bewaking_l1/l2/l3 (zie het pakket
-# home-assistant/packages/fase-bewaking-failover.yaml). Die sensoren
-# gebruiken de HomeWizard Instant-integratie (WebSocket, sub-seconde
-# updates van de P1-meter zelf i.p.v. de ~5 sec polling van de officiele
-# integratie) als die beschikbaar is, en vallen automatisch terug op de
-# officiele HomeWizard Energy-sensor zodra de WebSocket-verbinding van
-# die integratie wegvalt. Deze automatisering zelf hoeft daar niets voor
-# te doen - ze leest gewoon de failover-sensor, die zich naar buiten toe
-# identiek gedraagt als de oude sensor (zelfde eenheid, zelfde type
-# waarden). Nog niet getest in de praktijk (stand: 21 oktober 2026).
+# Hoort bij fase2-vaatwasser-afschakelen-bij-overbelasting.yaml.
 #
 # Documentatiekopie - de echte automatisering staat in Home Assistant zelf.
 
@@ -43,10 +28,28 @@ actions:
   - action: input_boolean.turn_off
     target:
       entity_id: input_boolean.vaatwasser_uit_door_overbelasting
-  - action: notify.send_message
-    target:
-      entity_id: notify.samsung_s23
-    data:
-      title: Fase 2 hersteld
-      message: De vaatwasser is weer ingeschakeld.
+  - sequence:
+      - action: notify.send_message
+        target:
+          entity_id: notify.samsung_s23
+        data:
+          title: Fase 2 hersteld
+          message: De eerder afgeschakelde apparaten op fase 2 zijn weer ingeschakeld.
+      - action: notify.mobile_app_samsung_s23
+        data:
+          message: command_webview
+          data:
+            ttl: 0
+            priority: high
+      - delay: '00:00:01'
+      - action: notify.mobile_app_samsung_s23
+        data:
+          message: TTS
+          title: De eerder afgeschakelde apparaten op fase 2 zijn weer ingeschakeld.
+          data:
+            ttl: 0
+            priority: high
+            importance: high
+            tts_text: De eerder afgeschakelde apparaten op fase 2 zijn weer ingeschakeld.
+            media_stream: alarm_stream_middle
 mode: single

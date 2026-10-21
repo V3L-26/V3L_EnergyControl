@@ -1,51 +1,16 @@
 # Automatisering "Fase 3 afschakelen bij overbelasting"
 #
-# Onderdeel van de uitbreiding van de overbelastingsbeveiliging met
-# HomeWizard Energy Sockets, zie home-assistant/planning/overbelasting-uitbreiding.md.
-# Op fase 3 heeft alleen de Droger een HomeWizard-stekker (de Oven, de
-# zwaarste onvoorspelbare last op deze fase, heeft er geen), dus ook hier
-# geen cascade nodig - gewoon uitschakelen bij overschrijding van de
-# drempel (5000 W).
+# HERSTELD (21 oktober 2026) UIT JE HOME ASSISTANT-BACKUP: de vorige
+# "documentatiekopie" miste de script.turn_on-aanroep naar het
+# "dupliceren_dupliceren_dupliceren"-script en de volledige
+# telefoonmelding (command_webview + TTS). Alleen de sensor is hier
+# aangepast: sensor.p1_meter_vermogen_fase_3 -> sensor.fase_bewaking_l3.
 #
-# Let op: dit staat los van de bestaande airco-overbelastingsautomatiseringen,
-# die ook op sensor.fase_bewaking_l3 triggeren bij 5000 W - beide
-# reageren onafhankelijk op dezelfde sensor, geen conflict.
-#
-# UPDATE (1 oktober 2026): de zustautomatisering op fase 2 (vaatwasser)
-# schakelde terecht af bij een echte maar zeer kortstondige piek (3384 W
-# -> 5335 W binnen 5 seconden, bevestigd via de HA-trace - geen bug, gewoon
-# een korte piek die niet eens in de per-minuut Supabase-log terugkwam).
-# Om deze automatisering niet onnodig op zulke korte pieken te laten
-# reageren is een ontdendering toegevoegd (5 seconden wachten en dan
-# herbevestigen dat fase 3 nog steeds boven 5000 W staat, via
-# delay+conditie omdat power.changed geen native for: ondersteunt).
-# Elke daadwerkelijke afschakeling wordt nu ook gelogd in de nieuwe
-# Supabase-tabel overload_event_log.
-#
-# UPDATE (1 oktober 2026, later): de overbelastingsgrens is sinds app-versie
-# 3.70 instelbaar IN DE V3L-APP in plaats van hier vastgelegd. De trigger
-# hieronder reageert daarom op een vaste, lage bodemwaarde (4000 W, de
-# laagste waarde die in de app te kiezen is) zodat hij altijd op tijd
-# afgaat; de conditie hieronder vergelijkt de actuele waarde met de echte -
-# door de gebruiker gekozen - grens in de helper input_number.p1_overload_w,
-# die wordt bijgewerkt door automations/instellingen-uit-supabase.yaml. Zie
-# app/CHANGELOG.md 3.70.
-#
-# Nog niet getest in de praktijk (stand: 1 oktober 2026).
-#
-#
-# UPDATE (21 oktober 2026): fase 1/2/3 worden hier niet meer rechtstreeks
-# via sensor.p1_meter_vermogen_fase_N gevolgd, maar via de nieuwe
-# failover-sensoren sensor.fase_bewaking_l1/l2/l3 (zie het pakket
-# home-assistant/packages/fase-bewaking-failover.yaml). Die sensoren
-# gebruiken de HomeWizard Instant-integratie (WebSocket, sub-seconde
-# updates van de P1-meter zelf i.p.v. de ~5 sec polling van de officiele
-# integratie) als die beschikbaar is, en vallen automatisch terug op de
-# officiele HomeWizard Energy-sensor zodra de WebSocket-verbinding van
-# die integratie wegvalt. Deze automatisering zelf hoeft daar niets voor
-# te doen - ze leest gewoon de failover-sensor, die zich naar buiten toe
-# identiek gedraagt als de oude sensor (zelfde eenheid, zelfde type
-# waarden). Nog niet getest in de praktijk (stand: 21 oktober 2026).
+# Op fase 3 heeft alleen de Droger een HomeWizard-stekker, dus geen
+# cascade nodig zoals bij fase 1 - gewoon uitschakelen bij overschrijding
+# van de drempel. Dit staat los van de airco-overbelastingsautomatiseringen
+# op fase 3 (woonkamer/Christian/Jason), die onafhankelijk op dezelfde
+# sensor reageren.
 #
 # Documentatiekopie - de echte automatisering staat in Home Assistant zelf.
 
@@ -59,9 +24,10 @@ triggers:
       threshold:
         type: above
         value:
-          active_choice: number
+          active_choice: entity
           number: 4000
           unit_of_measurement: W
+          entity: input_number.p1_overload_w
 conditions:
   - condition: state
     entity_id: switch.hal_droger
@@ -69,22 +35,55 @@ conditions:
 actions:
   - delay: '00:00:05'
   - condition: template
-    value_template: "{{ states('sensor.fase_bewaking_l3') | float(0) > (states('input_number.p1_overload_w') | float(5000)) }}"
+    value_template: >-
+      {{ states('sensor.fase_bewaking_l3') | float(0) >
+      (states('input_number.p1_overload_w') | float(5000)) }}
   - variables:
       overload_watt: "{{ states('sensor.fase_bewaking_l3') | float(0) }}"
       overload_threshold: "{{ states('input_number.p1_overload_w') | float(5000) }}"
   - action: switch.turn_off
     target:
       entity_id: switch.hal_droger
+  - action: script.turn_on
+    metadata: {}
+    target:
+      entity_id: >-
+        script.airco_unit_christian_uit_dreigende_overbelasting_dupliceren_dupliceren_dupliceren
+    data: {}
   - action: input_boolean.turn_on
     target:
       entity_id: input_boolean.droger_uit_door_overbelasting
-  - action: notify.send_message
-    target:
-      entity_id: notify.samsung_s23
-    data:
-      title: Fase 3 overbelasting
-      message: De droger is automatisch uitgeschakeld vanwege dreigende overbelasting.
+  - sequence:
+      - action: notify.send_message
+        target:
+          entity_id: notify.samsung_s23
+        data:
+          title: Fase 3 beveiligd
+          message: >-
+            Eén of meer apparaten op fase 3 zijn automatisch uitgeschakeld
+            vanwege dreigende overbelasting.
+      - action: notify.mobile_app_samsung_s23
+        data:
+          message: command_webview
+          data:
+            ttl: 0
+            priority: high
+      - delay: '00:00:01'
+      - action: notify.mobile_app_samsung_s23
+        data:
+          message: TTS
+          title: >-
+            Eén of meer apparaten op fase 3 zijn automatisch uitgeschakeld
+            vanwege dreigende overbelasting.
+          data:
+            ttl: 0
+            priority: high
+            importance: high
+            tts_text: >-
+              Eén of meer apparaten op fase 3 zijn automatisch uitgeschakeld
+              vanwege dreigende overbelasting. Controleer de Home Assistent
+              en Whatsapp meldingen.
+            media_stream: alarm_stream_middle
   - action: rest_command.supabase_login
     response_variable: login
   - action: rest_command.supabase_log_overload_event
