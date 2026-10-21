@@ -1,98 +1,21 @@
 # Automatisering "Airco Jason uitzetten bij overbelasting"
 #
-# Zet de airco in de slaapkamer van Jason uit zodra
-# sensor.fase_bewaking_l3 boven 5000 W komt.
+# HERSTELD (21 oktober 2026) UIT JE HOME ASSISTANT-BACKUP - BELANGRIJKE
+# CORRECTIE: zie de uitleg in airco-woonkamer-uit-bij-overbelasting-fase3.yaml -
+# dezelfde "UPDATE (14 oktober 2026)"-vervanging (triple uit-commando)
+# staat ook hier in de documentatie, maar is NOOIT echt doorgevoerd. De
+# echte, live automatisering gebruikt nog steeds refresh-knop + wachten
+# (max 30 sec), dan het uit-commando, gevolgd door een telefoonmelding
+# (command_webview + TTS "Let op! De airco van Jason...") en een aanroep
+# van het script script.airco_uit_door_overbelasting_woonkame (let op:
+# andere naam dan bij woonkamer/Christian - letterlijk zo overgenomen uit
+# de backup).
 #
-# Onderdeel van een set van drie losse automatiseringen (woonkamer,
-# slaapkamer Christian, slaapkamer Jason) die de oudere, gecombineerde
-# automatisering airco-uit-bij-overbelasting-fase3.yaml vervangen. Elke
-# airco heeft nu zijn eigen automatisering met dezelfde trigger, maar
-# volledig losse acties - zo houdt een trage of al-uitstaande unit de
-# andere twee niet op.
-#
-# EERDERE FIX (vervallen, zie UPDATE 14 oktober 2026 hieronder): het
-# uit-commando werd eerst direct na het triggeren verstuurd, zonder de
-# status van de Daikin Onecta-cloud te verversen. Herhaald handmatig
-# testen (op de woonkamer-unit) wees uit dat het uit-commando dan vaak
-# niet aankwam, dus werd hier een refresh-knop-druk + wachten op een
-# bijgewerkte status (met een vangnet-timeout van 30 seconden) vóór het
-# uit-commando toegevoegd.
-#
-# INCIDENT EN FIX (25 september 2026): de trigger-target combineerde
-# eerder area_id: meterkast met de specifieke entity_id
-# sensor.p1_meter_vermogen_fase_3. In Home Assistant is de combinatie van
-# area_id en entity_id in een target een UNIE, geen beperking - de
-# trigger reageerde daardoor op ALLE vermogensensoren in het gebied
-# "meterkast" (waaronder sensor.p1_meter_vermogen, het totaalvermogen
-# over alle fasen samen), niet uitsluitend op sensor.p1_meter_vermogen_fase_3
-# zoals bedoeld (bevestigd doordat Christians airco op 25 september 2026
-# onterecht uitschakelde bij 5699 W totaalverbruik, terwijl fase 3 zelf
-# nog geen 4000 W trok). Fix: area_id is verwijderd uit de trigger-target;
-# alleen de specifieke entity_id blijft over. Toegepast bij alle drie de
-# automatiseringen (woonkamer, Christian, Jason).
-#
-# UPDATE (1 oktober 2026): een vergelijkbare automatisering op fase 2
-# (vaatwasser) schakelde terecht af bij een echte maar zeer kortstondige
-# piek (3384 W -> 5335 W binnen 5 seconden, bevestigd via de HA-trace -
-# geen bug ditmaal, gewoon een korte piek die niet eens in de per-minuut
-# Supabase-log terugkwam). Om deze airco niet onnodig op zulke korte
-# pieken te laten reageren is een ontdendering toegevoegd: de actiereeks
-# wacht nu eerst 5 seconden en herbevestigt dan dat fase 3 nog steeds
-# boven 5000 W staat, voordat er iets gebeurt (power.changed ondersteunt
-# geen native for:, vandaar deze delay+conditie-aanpak). Verder wordt elke
-# daadwerkelijke afschakeling nu gelogd in de nieuwe Supabase-tabel
-# overload_event_log, met de watt-waarde op het moment dat de
-# ontdendering bevestigde dat het geen korte piek was.
-#
-# Er is GEEN automatisch herstel meer na afloop van de overbelasting - de
-# airco wordt handmatig weer aangezet zodra dat weer veilig is. De
-# eerdere hervat-automatisering (airco-weer-aan-na-overbelasting-fase3.yaml)
-# en de bijbehorende helper (input_text.airco_overload_uitgezet) zijn
-# hiermee vervallen en niet meer nodig.
-#
-# Volgt hetzelfde patroon als de geteste woonkamer-versie; trigger-target-
-# fix toegepast 25 september 2026; ontdendering + logging toegevoegd 1
-# oktober 2026.
-#
-# UPDATE (1 oktober 2026, later): de overbelastingsgrens is sinds app-versie
-# 3.70 instelbaar IN DE V3L-APP in plaats van hier vastgelegd. De trigger
-# hieronder reageert daarom op een vaste, lage bodemwaarde (4000 W, de
-# laagste waarde die in de app te kiezen is) zodat hij altijd op tijd
-# afgaat; de conditie hieronder vergelijkt de actuele waarde met de echte -
-# door de gebruiker gekozen - grens in de helper input_number.p1_overload_w,
-# die wordt bijgewerkt door automations/instellingen-uit-supabase.yaml. Zie
-# app/CHANGELOG.md 3.70.
-#
-# UPDATE (14 oktober 2026): de refresh+wait-aanpak hierboven kon in het
-# slechtste geval tot 30 seconden duren vóórdat het uit-commando
-# überhaupt werd verstuurd - te traag voor een beveiliging die juist
-# bedoeld is om binnen enkele seconden in te grijpen. climate.set_hvac_mode
-# met hvac_mode 'off' is echter een absoluut commando (geen relatieve
-# wijziging t.o.v. de huidige stand), dus het hoeft niet te wachten op een
-# verse status om correct te zijn - het probleem zat 'm in het commando
-# dat soms niet aankwam bij de Daikin-cloud, niet in een verkeerde
-# interpretatie ervan door Home Assistant. Daarom is de refresh/wait_template
-# vervangen door het uit-commando drie keer te versturen met 3 seconden
-# ertussen (in plaats van één keer te wachten tot 30 seconden): in het
-# gangbare geval is de airco nu al na ~5 seconden (alleen de ontdendering)
-# uit, en in het slechtste geval na ~11 seconden in plaats van tot 35
-# seconden. Nog niet getest in de praktijk (stand: 14 oktober 2026) - bij
-# een eerstvolgende daadwerkelijke afschakeling even in de HA-trace
-# controleren of de airco na de eerste poging al uit staat.
-#
-#
-# UPDATE (21 oktober 2026): fase 1/2/3 worden hier niet meer rechtstreeks
-# via sensor.p1_meter_vermogen_fase_N gevolgd, maar via de nieuwe
-# failover-sensoren sensor.fase_bewaking_l1/l2/l3 (zie het pakket
-# home-assistant/packages/fase-bewaking-failover.yaml). Die sensoren
-# gebruiken de HomeWizard Instant-integratie (WebSocket, sub-seconde
-# updates van de P1-meter zelf i.p.v. de ~5 sec polling van de officiele
-# integratie) als die beschikbaar is, en vallen automatisch terug op de
-# officiele HomeWizard Energy-sensor zodra de WebSocket-verbinding van
-# die integratie wegvalt. Deze automatisering zelf hoeft daar niets voor
-# te doen - ze leest gewoon de failover-sensor, die zich naar buiten toe
-# identiek gedraagt als de oude sensor (zelfde eenheid, zelfde type
-# waarden). Nog niet getest in de praktijk (stand: 21 oktober 2026).
+# Onderstaande versie is letterlijk uit de automatische Home Assistant-
+# backup (homeassistant.tar.gz > automations.yaml), ZONDER verder iets te
+# wijzigen behalve: sensor.p1_meter_vermogen_fase_3 -> sensor.fase_bewaking_l3
+# (de nieuwe failover-sensor, zie
+# home-assistant/packages/fase_bewaking_failover.yaml).
 #
 # Documentatiekopie - de echte automatisering staat in Home Assistant zelf.
 
@@ -106,43 +29,63 @@ triggers:
       threshold:
         type: above
         value:
-          active_choice: number
+          active_choice: entity
           number: 4000
           unit_of_measurement: W
+          entity: input_number.p1_overload_w
 conditions: []
 actions:
   - delay: '00:00:05'
   - condition: template
-    value_template: "{{ states('sensor.fase_bewaking_l3') | float(0) > (states('input_number.p1_overload_w') | float(5000)) }}"
+    value_template: >-
+      {{ states('sensor.fase_bewaking_l3') | float(0) >
+      (states('input_number.p1_overload_w') | float(5000)) }}
   - variables:
+      voor_refresh: states.climate.daikinap86208_room_temperature.last_updated
       overload_watt: "{{ states('sensor.fase_bewaking_l3') | float(0) }}"
       overload_threshold: "{{ states('input_number.p1_overload_w') | float(5000) }}"
+  - action: button.press
+    target:
+      entity_id: button.daikinap86208_refresh
+    data: {}
+  - wait_template: >-
+      {{ states.climate.daikinap86208_room_temperature.last_updated !=
+      voor_refresh }}
+    timeout:
+      seconds: 30
+    continue_on_timeout: true
   - action: climate.set_hvac_mode
     target:
       device_id: 340220b09ca9e0da8edefb69c49a78cd
     data:
       hvac_mode: 'off'
-    alias: Airco uitschakelen (poging 1)
-  - delay: '00:00:03'
-  - action: climate.set_hvac_mode
-    target:
-      device_id: 340220b09ca9e0da8edefb69c49a78cd
-    data:
-      hvac_mode: 'off'
-    alias: Airco uitschakelen (poging 2, voor de zekerheid)
-  - delay: '00:00:03'
-  - action: climate.set_hvac_mode
-    target:
-      device_id: 340220b09ca9e0da8edefb69c49a78cd
-    data:
-      hvac_mode: 'off'
-    alias: Airco uitschakelen (poging 3, voor de zekerheid)
-  - action: notify.send_message
-    target:
-      entity_id: notify.samsung_s23
-    data:
-      message: De airco in de slaapkamer van Jason is vanwege dreigende overbelasting uitgeschakeld.
-      title: Airco van Jason uitgeschakeld
+    alias: Airco uitschakelen
+  - sequence:
+      - action: notify.mobile_app_samsung_s23
+        data:
+          message: command_webview
+          data:
+            ttl: 0
+            priority: high
+      - delay: '00:00:01'
+      - action: notify.mobile_app_samsung_s23
+        data:
+          message: TTS
+          title: Airco van Jason uitgeschakeld
+          data:
+            ttl: 0
+            priority: high
+            importance: high
+            tts_text: >-
+              Let op! De airco van Jason is zojuist uitgeschakeld wegens
+              dreigende overbelasting van fase 3.
+            media_stream: alarm_stream_middle
+      - action: script.turn_on
+        metadata: {}
+        target:
+          entity_id: script.airco_uit_door_overbelasting_woonkame
+        data: {}
+        alias: Whatsapp waarschuwing versturen
   - action: rest_command.supabase_login
     response_variable: login
   - action: rest_command.supabase_log_overload_event
