@@ -1,10 +1,10 @@
 # Automatisering "Overbelasting melding"
 #
 # Stuurt een e-mail (via de Supabase Edge Function send-alert-email) zodra
-# een fase boven de vaste drempel van 5000 W komt. Sinds app-versie 3.67
-# doet de app dit niet meer zelf (ook niet bij een rechtstreekse
-# P1-verbinding), om dubbele mails te voorkomen - dit is de enige plek
-# waar overbelasting nog wordt gemeld.
+# een fase boven de (in de app ingestelde) overbelastingsgrens komt. Sinds
+# app-versie 3.67 doet de app dit niet meer zelf (ook niet bij een
+# rechtstreekse P1-verbinding), om dubbele mails te voorkomen - dit is de
+# enige plek waar overbelasting nog wordt gemeld.
 #
 # UPDATE (1 oktober 2026): op 1 oktober stuurde deze automatisering een
 # terechte maar over een zeer kortstondige piek op fase 2 (3384 W -> 5335 W
@@ -19,19 +19,25 @@
 # te zien is zonder een HA-trace te hoeven opzoeken.
 #
 # UPDATE (1 oktober 2026, later): de overbelastingsgrens is sinds app-versie
-# 3.70 instelbaar IN DE V3L-APP (Instellingen > Overbelastingsgrens) in
-# plaats van hier vastgelegd. De triggers hieronder reageren daarom op een
-# vaste, lage bodemwaarde (4000 W, de laagste waarde die in de app te kiezen
-# is) zodat ze altijd op tijd afgaan; een aparte conditie vergelijkt de
-# actuele waarde met de echte - door de gebruiker gekozen - grens in de
-# helper input_number.p1_overload_w, die wordt bijgewerkt door
-# automations/instellingen-uit-supabase.yaml. Zie app/CHANGELOG.md 3.70.
+# 3.70 instelbaar IN DE V3L-APP (Instellingen > Overbelastingsgrens). In
+# tegenstelling tot de power.changed-trigger die de afschakel-
+# automatiseringen gebruiken (die ondersteunt alleen een vast getal, geen
+# entiteit), kan de numeric_state-trigger hieronder de helper
+# input_number.p1_overload_w WEL rechtstreeks als drempel gebruiken (above:
+# input_number.p1_overload_w) - de trigger reageert dus al direct op de
+# echte, door de gebruiker gekozen grens, zonder tussenstap via een vaste
+# bodemwaarde. De conditie hieronder die nog een keer tegen
+# input_number.p1_overload_w checkt is daardoor strikt genomen overbodig
+# (de trigger vuurde al pas bij overschrijding van die exacte waarde), maar
+# is als extra veiligheidscontrole blijven staan voor het geval de
+# drempel-helper tussen het vuren van de trigger en het uitvoeren van de
+# actie zou wijzigen. Zie app/CHANGELOG.md 3.70.
 #
 #
 # UPDATE (21 oktober 2026): fase 1/2/3 worden hier niet meer rechtstreeks
 # via sensor.p1_meter_vermogen_fase_N gevolgd, maar via de nieuwe
 # failover-sensoren sensor.fase_bewaking_l1/l2/l3 (zie het pakket
-# home-assistant/packages/fase-bewaking-failover.yaml). Die sensoren
+# home-assistant/packages/fase_bewaking_failover.yaml). Die sensoren
 # gebruiken de HomeWizard Instant-integratie (WebSocket, sub-seconde
 # updates van de P1-meter zelf i.p.v. de ~5 sec polling van de officiele
 # integratie) als die beschikbaar is, en vallen automatisch terug op de
@@ -39,7 +45,17 @@
 # die integratie wegvalt. Deze automatisering zelf hoeft daar niets voor
 # te doen - ze leest gewoon de failover-sensor, die zich naar buiten toe
 # identiek gedraagt als de oude sensor (zelfde eenheid, zelfde type
-# waarden). Nog niet getest in de praktijk (stand: 21 oktober 2026).
+# waarden). Bevestigd werkend op 21 oktober 2026 (de HomeWizard Instant-
+# integratie staat aan, alle vier failover-sensoren tonen "bron: instant
+# (websocket)").
+#
+# UPDATE (21 oktober 2026, later) - CORRECTIE: een eerdere versie van dit
+# bestand had de trigger-drempel per ongeluk vervangen door een vaste
+# bodemwaarde (above: 4000), zoals bij de power.changed-afschakel-
+# automatiseringen - dat was niet nodig en wijkt af van hoe deze
+# automatisering in de praktijk (in Arjan's eigen Home Assistant) al
+# werkte. Teruggezet naar above: input_number.p1_overload_w, exact zoals
+# de bestaande, werkende versie.
 #
 # Documentatiekopie - de echte automatisering staat in Home Assistant
 # zelf (automations.yaml of via de UI aangemaakt).
@@ -50,47 +66,51 @@ mode: parallel
 max: 3
 triggers:
   - trigger: numeric_state
-    entity_id: sensor.fase_bewaking_l1
-    above: 4000
+    entity_id:
+      - sensor.fase_bewaking_l1
+    above: input_number.p1_overload_w
     for:
       seconds: 5
     id: L1
   - trigger: numeric_state
-    entity_id: sensor.fase_bewaking_l2
-    above: 4000
+    entity_id:
+      - sensor.fase_bewaking_l2
+    above: input_number.p1_overload_w
     for:
       seconds: 5
     id: L2
   - trigger: numeric_state
-    entity_id: sensor.fase_bewaking_l3
-    above: 4000
+    entity_id:
+      - sensor.fase_bewaking_l3
+    above: input_number.p1_overload_w
     for:
       seconds: 5
     id: L3
 conditions:
   - condition: template
     value_template: >-
-      {{ (trigger.to_state.state | float(0)) > (states('input_number.p1_overload_w') | float(5000)) }}
+      {{ (trigger.to_state.state | float(0)) >
+      (states('input_number.p1_overload_w') | float(5000)) }}
   - condition: template
-    value_template: >-
+    value_template: |-
       {{ this.attributes.last_triggered is none
          or (now() - this.attributes.last_triggered).total_seconds() > 60 }}
 actions:
   - variables:
-      overload_threshold: "{{ states('input_number.p1_overload_w') | float(5000) }}"
+      overload_threshold: '{{ states(''input_number.p1_overload_w'') | float(5000) }}'
   - action: rest_command.supabase_login
     response_variable: login
   - action: rest_command.stuur_overload_mail
     data:
-      token: "{{ login['content']['access_token'] }}"
-      phase: "{{ trigger.id if trigger.id is defined else 'Test' }}"
-      watt: "{{ trigger.to_state.state if trigger.to_state is defined else 0 }}"
-      threshold: "{{ overload_threshold }}"
+      token: '{{ login[''content''][''access_token''] }}'
+      phase: '{{ trigger.id if trigger.id is defined else ''Test'' }}'
+      watt: '{{ trigger.to_state.state if trigger.to_state is defined else 0 }}'
+      threshold: '{{ overload_threshold }}'
   - action: rest_command.supabase_log_overload_event
     data:
-      token: "{{ login['content']['access_token'] }}"
-      phase: "{{ trigger.id if trigger.id is defined else 'Test' }}"
-      watt: "{{ trigger.to_state.state if trigger.to_state is defined else 0 }}"
-      threshold: "{{ overload_threshold }}"
+      token: '{{ login[''content''][''access_token''] }}'
+      phase: '{{ trigger.id if trigger.id is defined else ''Test'' }}'
+      watt: '{{ trigger.to_state.state if trigger.to_state is defined else 0 }}'
+      threshold: '{{ overload_threshold }}'
       source: mail
       action: mail_verstuurd
