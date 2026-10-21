@@ -1,5 +1,6 @@
 # Pakket "Fase bewaking failover" (nieuw, 21 oktober 2026; totaal-sensor
-# toegevoegd 21 oktober 2026, later)
+# toegevoegd 21 oktober 2026, later; echte entity_id's ingevuld 21 oktober
+# 2026, nog later)
 #
 # Vier template-sensoren die het totale en de drie fase-vermogens leveren
 # via dezelfde failover-aanpak: sensor.fase_bewaking_totaal en
@@ -33,16 +34,29 @@
 # Tools > States te controleren of de Instant-integratie daadwerkelijk
 # wordt gebruikt.
 #
-# BELANGRIJK - NOG IN TE VULLEN: de vier "sensor.VUL_IN_..." entity_id's
-# hieronder zijn een aanname (gebaseerd op de broncode van de Instant-
-# integratie, niet bevestigd). Zodra de HomeWizard Instant-integratie is
-# geinstalleerd en gekoppeld, ga je naar Instellingen > Apparaten en
-# diensten > Entiteiten, zoek op "active power" of de naam van je nieuwe
-# apparaat, en vervang de vier "sensor.VUL_IN_..." hieronder door de echte
-# entity_id's. Zolang dat niet is gebeurd, faalt de "if"-conditie hieronder
-# gewoon altijd (een niet-bestaande entiteit levert 'unknown' op) en blijft
-# alles stil werken op de officiele sensor - dus niets breekt, alles werkt
-# gewoon nog niet sneller dan voorheen totdat dit is ingevuld.
+# UPDATE (21 oktober 2026, later): de vier entity_id's van de HomeWizard
+# Instant-integratie (device "HACS_P1 Meter", gebied Meterkast) zijn nu
+# bevestigd via Instellingen > Apparaten en diensten > Entiteiten en
+# hieronder ingevuld:
+#   - Vermogen (totaal)   -> sensor.p1_meter_vermogen_2
+#   - Power phase 1       -> sensor.p1_meter_power_phase_1
+#   - Power phase 2       -> sensor.p1_meter_power_phase_2
+#   - Power phase 3       -> sensor.p1_meter_power_phase_3
+# LET OP - verwarrende naam: sensor.p1_meter_vermogen_2 (Instant,
+# WebSocket) lijkt qua naam erg op de bestaande sensor.p1_meter_vermogen
+# (de OFFICIELE HomeWizard Energy-integratie, ~5 sec polling) - dat zijn
+# dus TWEE VERSCHILLENDE sensoren van TWEE VERSCHILLENDE integraties, niet
+# dezelfde. De "_2" is hier het enige onderscheid; let hier in Developer
+# Tools > States goed op als je deze verder uitzoekt, om ze niet per
+# ongeluk te verwisselen.
+#
+# Zodra de vier sensoren hierboven een geldige waarde leveren (dus de
+# Instant-integratie daadwerkelijk verbonden is), schakelen de sensoren
+# hieronder vanzelf over - dat is nu direct actief, een herstart van Home
+# Assistant is niet nodig. Controleer na het plakken even het "bron"-
+# attribuut van bijvoorbeeld sensor.fase_bewaking_totaal in Developer
+# Tools > States: dat moet "instant (websocket)" tonen zodra de Instant-
+# integratie actief is, en anders "officieel (fallback)".
 #
 # Documentatiekopie - het echte pakket staat in Home Assistant zelf,
 # in /config/packages/fase-bewaking-failover.yaml (zie
@@ -56,7 +70,7 @@ template:
         device_class: power
         state_class: measurement
         state: >-
-          {% set instant = states('sensor.VUL_IN_instant_vermogen_totaal') %}
+          {% set instant = states('sensor.p1_meter_vermogen_2') %}
           {% if instant not in ['unknown', 'unavailable', 'none', ''] %}
             {{ instant }}
           {% else %}
@@ -64,7 +78,7 @@ template:
           {% endif %}
         attributes:
           bron: >-
-            {% set instant = states('sensor.VUL_IN_instant_vermogen_totaal') %}
+            {% set instant = states('sensor.p1_meter_vermogen_2') %}
             {{ 'instant (websocket)' if instant not in ['unknown', 'unavailable', 'none', ''] else 'officieel (fallback)' }}
 
       - name: "Fase bewaking L1"
@@ -73,7 +87,7 @@ template:
         device_class: power
         state_class: measurement
         state: >-
-          {% set instant = states('sensor.VUL_IN_instant_vermogen_fase_1') %}
+          {% set instant = states('sensor.p1_meter_power_phase_1') %}
           {% if instant not in ['unknown', 'unavailable', 'none', ''] %}
             {{ instant }}
           {% else %}
@@ -81,7 +95,7 @@ template:
           {% endif %}
         attributes:
           bron: >-
-            {% set instant = states('sensor.VUL_IN_instant_vermogen_fase_1') %}
+            {% set instant = states('sensor.p1_meter_power_phase_1') %}
             {{ 'instant (websocket)' if instant not in ['unknown', 'unavailable', 'none', ''] else 'officieel (fallback)' }}
 
       - name: "Fase bewaking L2"
@@ -90,7 +104,7 @@ template:
         device_class: power
         state_class: measurement
         state: >-
-          {% set instant = states('sensor.VUL_IN_instant_vermogen_fase_2') %}
+          {% set instant = states('sensor.p1_meter_power_phase_2') %}
           {% if instant not in ['unknown', 'unavailable', 'none', ''] %}
             {{ instant }}
           {% else %}
@@ -98,7 +112,7 @@ template:
           {% endif %}
         attributes:
           bron: >-
-            {% set instant = states('sensor.VUL_IN_instant_vermogen_fase_2') %}
+            {% set instant = states('sensor.p1_meter_power_phase_2') %}
             {{ 'instant (websocket)' if instant not in ['unknown', 'unavailable', 'none', ''] else 'officieel (fallback)' }}
 
       - name: "Fase bewaking L3"
@@ -107,7 +121,7 @@ template:
         device_class: power
         state_class: measurement
         state: >-
-          {% set instant = states('sensor.VUL_IN_instant_vermogen_fase_3') %}
+          {% set instant = states('sensor.p1_meter_power_phase_3') %}
           {% if instant not in ['unknown', 'unavailable', 'none', ''] %}
             {{ instant }}
           {% else %}
@@ -115,5 +129,5 @@ template:
           {% endif %}
         attributes:
           bron: >-
-            {% set instant = states('sensor.VUL_IN_instant_vermogen_fase_3') %}
+            {% set instant = states('sensor.p1_meter_power_phase_3') %}
             {{ 'instant (websocket)' if instant not in ['unknown', 'unavailable', 'none', ''] else 'officieel (fallback)' }}
