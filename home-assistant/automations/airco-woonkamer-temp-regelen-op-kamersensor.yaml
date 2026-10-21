@@ -1,47 +1,57 @@
-# Automatisering "Airco woonkamer - kamersensor regelen (setpoint-nudge)"
+# Automatisering "Airco woonkamer - kamersensor regelen (push + auto-reset)"
 #
-# Vervangt het handmatige trucje "zet de Daikin op 28 graden zodat hij niet
-# te vroeg gaat idlen op zijn eigen (te koude) interne sensor". In plaats
-# van in één keer naar een ver setpoint te springen (waardoor de unit vol
-# vermogen geeft en de luchtstroom vlak bij de unit erg warm wordt), zet
-# deze automatisering de Daikin-setpoint telkens maar een klein stukje
-# (STEP) boven wat de Daikin ZELF intern meet. Zo denkt de unit nooit dat
-# hij al (bijna) klaar is en blijft hij doorverwarmen, maar hoeft hij nooit
-# een groot gat in één keer te overbruggen - dus geen volle-hitte-uitstoot.
-# Zodra de ECHTE kamertemperatuur (de Sonoff-sensor) de gewenste waarde
-# bereikt, wordt de setpoint teruggezet naar de gewenste temperatuur zelf,
-# zodat de unit rustig kan uitregelen/idlen.
+# Automatiseert het handmatige trucje "zet de Daikin op 28 graden om de
+# kamer (volgens de Sonoff-sensor) echt op 20 graden te krijgen, en denk
+# er dan aan om 'm weer terug te zetten zodra het warm genoeg is".
 #
-# Deze automatisering regelt ALLEEN de doeltemperatuur (climate.set_temperature
-# met enkel het veld "temperature"). Ventilatorstand (stille ventilator) en
-# modus (eco) worden niet aangeraakt en blijven dus precies zoals ingesteld.
+# HERZIENE VERSIE (21 oktober 2026, zelfde dag): de eerste versie van deze
+# automatisering probeerde de Daikin-setpoint slechts een klein stukje
+# (1 graad) boven zijn EIGEN interne meting te houden, in de aanname dat
+# dat voldoende zou zijn om 'm aan het verwarmen te houden zonder naar vol
+# vermogen te hoeven. In de praktijk bleek dat niet te werken: deze Daikin
+# heeft blijkbaar echt een grote, aanhoudende setpoint - meestal 28 graden
+# - nodig om voldoende vermogen te leveren om de kamer (Sonoff) op 20
+# graden te krijgen; een kleine marge boven zijn eigen meting was niet
+# genoeg. Deze versie bootst daarom gewoon het bewezen werkende handmatige
+# trucje na (vaste "push"-setpoint, geen geleidelijke nudge), maar dan
+# automatisch aan- en uitgezet op basis van de echte kamertemperatuur.
 #
-# BELANGRIJK - Daikin Onecta cloud quota: de Onecta-integratie heeft een
-# quota van ~200 API-calls per dag (zie ook de overbelastings-automatiseringen
-# die hier al rekening mee houden). Deze automatisering checkt elke 5
-# minuten of er genudged moet worden, maar stuurt ALLEEN daadwerkelijk een
-# commando naar de Daikin als de nieuwe setpoint merkbaar afwijkt van de
-# huidige (zie de conditie "alleen bij verschil" in de acties) - dus niet
-# elke 5 minuten een call, alleen als het echt nodig is. Loopt dit toch
-# tegen de quota aan (bijvoorbeeld bij lange verwarmsessies of als je dit
-# straks ook voor de andere twee airco's bouwt), overweeg dan het interval
-# hieronder (momenteel "/5", elke 5 minuten) te verruimen naar bijvoorbeeld
-# elke 10 minuten.
+# Om het effect van die hoge setpoint - een hete luchtstroom vlak bij de
+# unit, omdat dezelfde hoeveelheid warmte bij een lage (stille)
+# ventilatorstand over minder lucht verspreid wordt - te verzachten, zet
+# deze automatisering tijdens het actief verwarmen de ventilator ook een
+# standje hoger (van "quiet" naar "2"). Dezelfde hoeveelheid warmte over
+# meer lucht betekent een lagere temperatuur per luchtstroom, dus minder
+# hete windvlaag, en waarschijnlijk ook een betere/snellere verwarming van
+# de hele kamer (minder warme lucht die bij het plafond/de unit blijft
+# hangen). NIET hoger dan "2" - uitdrukkelijk zo aangegeven i.v.m. geluid.
+#
+# Zodra de Sonoff-kamersensor de gewenste temperatuur (ingesteld via de
+# V3L-app, input_text.woonkamertemperatuur) bereikt, gaat zowel de setpoint
+# terug naar die gewenste waarde als de ventilator terug naar "quiet" -
+# dus geen handmatig terugzetten meer nodig.
 #
 # Alleen actief zolang de airco zelf al in modus "heat" staat (deze
-# automatisering zet de airco niet zelf aan of uit - dat doe je zelf of via
-# een andere automatisering).
+# automatisering zet de airco niet zelf aan of uit).
 #
-# Nieuw, 21 oktober 2026 - nog niet getest in de praktijk.
+# BELANGRIJK - Daikin Onecta cloud quota: de Onecta-integratie heeft een
+# quota van ~200 API-calls per dag. Deze automatisering checkt elke 5
+# minuten (en bij elke nieuwe Sonoff-meting), maar stuurt alleen
+# daadwerkelijk een climate.set_temperature- of climate.set_fan_mode-
+# commando als de huidige waarde nog niet overeenkomt met wat er nodig is
+# - dus geen herhaalde calls zolang hij al op de juiste stand staat.
+#
+# Nog niet getest in de praktijk.
 #
 # Documentatiekopie - de echte automatisering staat in Home Assistant zelf.
 
-alias: Airco woonkamer - kamersensor regelen (setpoint-nudge)
+alias: Airco woonkamer - kamersensor regelen (push + auto-reset)
 description: >-
-  Houdt de Daikin-setpoint dicht bij zijn eigen interne meting (in kleine
-  stapjes omhoog) totdat de Sonoff-kamersensor de gewenste temperatuur
-  bereikt, om het "zet 'm maar op 28" trucje en de hete luchtstroom erbij
-  te vermijden.
+  Zet de Daikin-setpoint en ventilator automatisch op de bewezen
+  "push"-stand (28 graden, ventilator 2) zolang de Sonoff-kamersensor nog
+  onder de gewenste temperatuur zit, en zet beide terug naar normaal
+  (gewenste temperatuur, ventilator quiet) zodra de kamer op temperatuur
+  is.
 triggers:
   - trigger: time_pattern
     minutes: "/5"
@@ -53,45 +63,63 @@ conditions:
     state: 'heat'
 actions:
   - variables:
-      step: 1.0
-      max_setpoint: 23.0
+      push_setpoint: 28.0
+      push_fan_mode: '2'
+      idle_fan_mode: quiet
       deadband: 0.3
       desired: "{{ states('input_text.woonkamertemperatuur') | float(20) }}"
       room_now: "{{ states('sensor.woonkamer_temperatuur_meter_temperatuur') | float(none) }}"
-      daikin_internal: "{{ state_attr('climate.daikinap46344_room_temperature', 'current_temperature') | float(none) }}"
       daikin_setpoint_now: "{{ state_attr('climate.daikinap46344_room_temperature', 'temperature') | float(none) }}"
+      daikin_fan_now: "{{ state_attr('climate.daikinap46344_room_temperature', 'fan_mode') }}"
   - condition: template
-    value_template: "{{ room_now is not none and daikin_internal is not none and daikin_setpoint_now is not none }}"
+    value_template: "{{ room_now is not none and daikin_setpoint_now is not none }}"
   - choose:
-      # Kamer nog te koud: zet de setpoint een klein stukje boven wat de
-      # Daikin zelf meet, zodat hij blijft doorverwarmen zonder meteen vol
-      # vermogen te geven - maar alleen als dat een merkbaar andere
-      # setpoint oplevert dan nu al ingesteld staat (quota-vriendelijk).
+      # Kamer nog te koud: naar de bewezen push-stand (28 graden, ventilator
+      # 2) - maar alleen de commando's sturen die daadwerkelijk nodig zijn.
       - conditions:
           - condition: template
             value_template: "{{ room_now < (desired - deadband) }}"
         sequence:
-          - variables:
-              new_setpoint: "{{ [daikin_internal + step, max_setpoint] | min }}"
-          - condition: template
-            value_template: "{{ (new_setpoint - daikin_setpoint_now) | abs > 0.4 }}"
-          - action: climate.set_temperature
-            target:
-              entity_id: climate.daikinap46344_room_temperature
-            data:
-              temperature: "{{ new_setpoint }}"
-      # Kamer heeft de gewenste temperatuur bereikt: zet de setpoint terug
-      # naar de gewenste waarde zelf, zodat de Daikin rustig kan uitregelen
-      # in plaats van op een kunstmatig hoge setpoint te blijven staan.
+          - if:
+              - condition: template
+                value_template: "{{ (daikin_setpoint_now - push_setpoint) | abs > 0.4 }}"
+            then:
+              - action: climate.set_temperature
+                target:
+                  entity_id: climate.daikinap46344_room_temperature
+                data:
+                  temperature: "{{ push_setpoint }}"
+          - if:
+              - condition: template
+                value_template: "{{ daikin_fan_now != push_fan_mode }}"
+            then:
+              - action: climate.set_fan_mode
+                target:
+                  entity_id: climate.daikinap46344_room_temperature
+                data:
+                  fan_mode: "{{ push_fan_mode }}"
+      # Kamer heeft de gewenste temperatuur bereikt: terug naar normaal
+      # (gewenste temperatuur, stille ventilator).
       - conditions:
           - condition: template
             value_template: "{{ room_now >= (desired - deadband) }}"
         sequence:
-          - condition: template
-            value_template: "{{ (daikin_setpoint_now - desired) | abs > 0.4 }}"
-          - action: climate.set_temperature
-            target:
-              entity_id: climate.daikinap46344_room_temperature
-            data:
-              temperature: "{{ desired }}"
+          - if:
+              - condition: template
+                value_template: "{{ (daikin_setpoint_now - desired) | abs > 0.4 }}"
+            then:
+              - action: climate.set_temperature
+                target:
+                  entity_id: climate.daikinap46344_room_temperature
+                data:
+                  temperature: "{{ desired }}"
+          - if:
+              - condition: template
+                value_template: "{{ daikin_fan_now != idle_fan_mode }}"
+            then:
+              - action: climate.set_fan_mode
+                target:
+                  entity_id: climate.daikinap46344_room_temperature
+                data:
+                  fan_mode: "{{ idle_fan_mode }}"
 mode: single
