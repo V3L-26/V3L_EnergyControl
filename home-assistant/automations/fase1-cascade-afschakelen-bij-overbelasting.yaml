@@ -1,66 +1,29 @@
 # Automatisering "Fase 1 cascaderend afschakelen bij overbelasting"
 #
-# Onderdeel van de uitbreiding van de overbelastingsbeveiliging met
-# HomeWizard Energy Sockets, zie home-assistant/planning/overbelasting-uitbreiding.md.
-# Schakelt bij een dreigende overbelasting op fase 1 de daar aangesloten
-# stopcontact-apparaten stap voor stap uit, in plaats van in één keer
-# alles: Magnetron -> Airfryer -> Koffiezetapparaat -> Wasmachine. Na elke
-# stap wordt de actuele fase-1-waarde opnieuw gecheckt (via een template-
-# conditie op sensor.fase_bewaking_l1), zodat er niet meer wordt
-# uitgeschakeld dan nodig is om weer onder de drempel te komen.
+# HERSTELD (21 oktober 2026) UIT JE HOME ASSISTANT-BACKUP: de versie die
+# eerder als "documentatiekopie" in deze repository stond, was een
+# incomplete reconstructie - hij miste de script.turn_on-aanroepen naar de
+# "dupliceren"-scripts per apparaat en de volledige telefoonmelding
+# (command_webview + TTS met gesproken waarschuwing). Die reconstructie is
+# (voor zover bekend) nooit in Home Assistant geplakt, dus er is niets
+# verloren gegaan - maar plak nu wel ONDERSTAANDE versie, niet een eerdere
+# uit deze chat.
 #
-# Volgorde is bewust van minst naar meest ingrijpend: de drie kortdurende
-# keukenapparaten eerst (een onderbroken magnetron-/airfryer-/koffie-beurt
-# is een klein ongemak), de wasmachine pas als laatste redmiddel (een
-# onderbroken wascyclus is vervelender). Drempel instelbaar in de app (zie
-# UPDATE hieronder, 3.70). Deze stekkers zijn
-# lokaal (HomeWizard, geen cloud), dus de refresh + wait_template-workaround
-# die bij de Daikin-airco's nodig is, is hier niet nodig.
+# Deze versie komt letterlijk uit de automatische Home Assistant-backup
+# (homeassistant.tar.gz > automations.yaml), ZONDER verder iets te wijzigen
+# behalve: sensor.p1_meter_vermogen_fase_1 -> sensor.fase_bewaking_l1 (de
+# nieuwe failover-sensor, zie home-assistant/packages/fase_bewaking_failover.yaml -
+# gebruikt de HomeWizard Instant-integratie via WebSocket zolang die
+# beschikbaar is, met automatische terugval op de officiele sensor).
 #
-# Elke uitgeschakelde stap zet een input_boolean-helper aan
-# (input_boolean.<apparaat>_uit_door_overbelasting), zodat de bijbehorende
-# hersteI-automatisering (fase1-herstel-na-overbelasting.yaml) weet welke
-# apparaten zij zelf heeft afgeschakeld en dus weer aan mag zetten -
-# apparaten die de gebruiker zelf om een andere reden uit had gelaten,
-# blijven met rust.
-#
-# UPDATE (1 oktober 2026): de zustautomatisering op fase 2 (vaatwasser)
-# schakelde terecht af bij een echte maar zeer kortstondige piek (3384 W
-# -> 5335 W binnen 5 seconden, bevestigd via de HA-trace - geen bug, gewoon
-# een korte piek die niet eens in de per-minuut Supabase-log terugkwam).
-# Om deze cascade niet onnodig op zulke korte pieken te laten reageren is
-# een ontdendering toegevoegd vóór de allereerste stap: 5 seconden
-# wachten en dan herbevestigen dat fase 1 nog steeds boven 5000 W staat
-# (power.changed ondersteunt geen native for:, vandaar deze
-# delay+conditie-aanpak). De per-stap hercontrole die de cascade al had,
-# bleef ongewijzigd. Elke daadwerkelijke afschakeling wordt nu ook gelogd
-# in de nieuwe Supabase-tabel overload_event_log.
-#
-# UPDATE (1 oktober 2026, later): de overbelastingsgrens is sinds app-versie
-# 3.70 instelbaar IN DE V3L-APP in plaats van hier vastgelegd. De trigger
-# hieronder reageert daarom op een vaste, lage bodemwaarde (4000 W, de
-# laagste waarde die in de app te kiezen is) zodat hij altijd op tijd
-# afgaat; alle hercontroles (de eerste ontdendering en elke stap in de
-# cascade) vergelijken nu met de echte - door de gebruiker gekozen - grens
-# in de helper input_number.p1_overload_w, die wordt bijgewerkt door
-# automations/instellingen-uit-supabase.yaml. Zie app/CHANGELOG.md 3.70.
-#
-# Getest in de praktijk (zie README, incident 1 oktober 2026 - overigens
-# op fase 2, niet fase 1).
-#
-#
-# UPDATE (21 oktober 2026): fase 1/2/3 worden hier niet meer rechtstreeks
-# via sensor.p1_meter_vermogen_fase_N gevolgd, maar via de nieuwe
-# failover-sensoren sensor.fase_bewaking_l1/l2/l3 (zie het pakket
-# home-assistant/packages/fase-bewaking-failover.yaml). Die sensoren
-# gebruiken de HomeWizard Instant-integratie (WebSocket, sub-seconde
-# updates van de P1-meter zelf i.p.v. de ~5 sec polling van de officiele
-# integratie) als die beschikbaar is, en vallen automatisch terug op de
-# officiele HomeWizard Energy-sensor zodra de WebSocket-verbinding van
-# die integratie wegvalt. Deze automatisering zelf hoeft daar niets voor
-# te doen - ze leest gewoon de failover-sensor, die zich naar buiten toe
-# identiek gedraagt als de oude sensor (zelfde eenheid, zelfde type
-# waarden). Nog niet getest in de praktijk (stand: 21 oktober 2026).
+# Werking (uit de echte backup): bij dreigende overbelasting op fase 1
+# worden de daar aangesloten stopcontact-apparaten stap voor stap
+# uitgeschakeld - Magnetron -> Airfryer -> Koffiezetapparaat -> Wasmachine -
+# met na elke stap een hercontrole en 5 sec pauze, en bij elke stap ook een
+# "dupliceren"-script (waarschijnlijk een los Whatsapp/notificatiescript)
+# en een Supabase-logregel. Aan het einde volgt een telefoonmelding (eerst
+# de app naar de voorgrond via command_webview, dan een gesproken TTS-
+# waarschuwing).
 #
 # Documentatiekopie - de echte automatisering staat in Home Assistant zelf.
 
@@ -74,14 +37,17 @@ triggers:
       threshold:
         type: above
         value:
-          active_choice: number
+          active_choice: entity
           number: 4000
           unit_of_measurement: W
+          entity: input_number.p1_overload_w
 conditions: []
 actions:
   - delay: '00:00:05'
   - condition: template
-    value_template: "{{ states('sensor.fase_bewaking_l1') | float(0) > (states('input_number.p1_overload_w') | float(5000)) }}"
+    value_template: >-
+      {{ states('sensor.fase_bewaking_l1') | float(0) >
+      (states('input_number.p1_overload_w') | float(5000)) }}
   - variables:
       overload_threshold: "{{ states('input_number.p1_overload_w') | float(5000) }}"
   - action: rest_command.supabase_login
@@ -94,6 +60,11 @@ actions:
       - action: switch.turn_off
         target:
           entity_id: switch.keuken_magnetron
+      - action: script.turn_on
+        metadata: {}
+        target:
+          entity_id: script.airco_unit_christian_uit_dreigende_overbelasting_dupliceren_3
+        data: {}
       - action: input_boolean.turn_on
         target:
           entity_id: input_boolean.magnetron_uit_door_overbelasting
@@ -116,6 +87,11 @@ actions:
       - action: switch.turn_off
         target:
           entity_id: switch.energy_socket
+      - action: script.turn_on
+        metadata: {}
+        target:
+          entity_id: script.airco_unit_christian_uit_dreigende_overbelasting_dupliceren_4
+        data: {}
       - action: input_boolean.turn_on
         target:
           entity_id: input_boolean.airfryer_uit_door_overbelasting
@@ -138,6 +114,11 @@ actions:
       - action: switch.turn_off
         target:
           entity_id: switch.keuken_koffiezetapparaat
+      - action: script.turn_on
+        metadata: {}
+        target:
+          entity_id: script.airco_unit_christian_uit_dreigende_overbelasting_dupliceren_5
+        data: {}
       - action: input_boolean.turn_on
         target:
           entity_id: input_boolean.koffiezetapparaat_uit_door_overbelasting
@@ -160,6 +141,11 @@ actions:
       - action: switch.turn_off
         target:
           entity_id: switch.hal_wasmachine
+      - action: script.turn_on
+        metadata: {}
+        target:
+          entity_id: script.airco_unit_christian_uit_dreigende_overbelasting_dupliceren_6
+        data: {}
       - action: input_boolean.turn_on
         target:
           entity_id: input_boolean.wasmachine_uit_door_overbelasting
@@ -171,12 +157,35 @@ actions:
           threshold: "{{ overload_threshold }}"
           source: wasmachine
           action: uitgeschakeld
-  - action: notify.send_message
-    target:
-      entity_id: notify.samsung_s23
-    data:
-      title: Fase 1 overbelasting
-      message: >-
-        Eén of meer apparaten op fase 1 zijn automatisch uitgeschakeld
-        vanwege dreigende overbelasting.
+  - sequence:
+      - action: notify.send_message
+        target:
+          entity_id: notify.samsung_s23
+        data:
+          title: Fase 1 beveiligd
+          message: >-
+            Eén of meer apparaten op fase 1 zijn automatisch uitgeschakeld
+            vanwege dreigende overbelasting.
+      - action: notify.mobile_app_samsung_s23
+        data:
+          message: command_webview
+          data:
+            ttl: 0
+            priority: high
+      - delay: '00:00:01'
+      - action: notify.mobile_app_samsung_s23
+        data:
+          message: TTS
+          title: >-
+            Eén of meer apparaten op fase 1 zijn automatisch uitgeschakeld
+            vanwege dreigende overbelasting.
+          data:
+            ttl: 0
+            priority: high
+            importance: high
+            tts_text: >-
+              Eén of meer apparaten op fase 1 zijn automatisch uitgeschakeld
+              vanwege dreigende overbelasting. Controleer de Home Assistent
+              en Whatsapp meldingen.
+            media_stream: alarm_stream_middle
 mode: single
