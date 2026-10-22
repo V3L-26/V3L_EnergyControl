@@ -5,55 +5,53 @@
 # anders in zomerstand (koelen, swing aan), altijd met de ventilator op
 # "quiet". Als de woonkamer-airco in de winter wordt aangezet, blijft deze
 # automatisering daarna actief (repeat) om via de Sonoff-kamersensor te
-# schakelen tussen idle (16 graden) en verwarmen ("push") op basis van de
-# helper input_text.woonkamertemperatuur - dezelfde "zet 'm hoog, dan weer
-# terug"-truc die ook los is uitgewerkt in
-# airco-woonkamer-temp-regelen-op-kamersensor.yaml.
+# schakelen tussen idle en verwarmen ("push") op basis van de helper
+# input_text.woonkamertemperatuur.
 #
 # LET OP - niet gelijktijdig met airco-woonkamer-temp-regelen-op-
 # kamersensor.yaml gebruiken: die andere automatisering doet voor de
 # woonkamer-airco in de praktijk hetzelfde (setpoint + ventilator op basis
 # van de Sonoff-sensor bijstellen). Beide tegelijk actief laten zou tot
-# twee automatiseringen leiden die om en om tegenstrijdige
-# climate.set_temperature/set_fan_mode-commando's naar dezelfde airco
-# sturen. Zolang deze automatisering ("Airco seizoen modus") actief is,
-# hoort airco-woonkamer-temp-regelen-op-kamersensor.yaml dus uitgeschakeld
-# te blijven (wat op dit moment ook het geval is).
+# twee automatiseringen leiden die om en om tegenstrijdige commando's naar
+# dezelfde airco sturen. Zolang deze automatisering ("Airco seizoen modus")
+# actief is, hoort airco-woonkamer-temp-regelen-op-kamersensor.yaml dus
+# uitgeschakeld te blijven (wat op dit moment ook het geval is).
 #
-# UPDATE (21 oktober 2026): de repeat-loop hieronder is op twee punten
-# aangepast t.o.v. de oorspronkelijke versie:
+# UPDATE (21 oktober 2026): de repeat-loop stuurde oorspronkelijk
+# onvoorwaardelijk elke 30 seconden climate.set_temperature/set_fan_mode
+# naar de Daikin Onecta-cloud, ook als er niets te wijzigen was - bij een
+# quota van ~200 Onecta-calls/dag was dat quota daardoor al binnen
+# ongeveer 1,5 a 2 uur verwarmen volledig verbruikt, wat ook de
+# overbelastingsbeveiliging kon laten haperen (die zelf ook een geslaagde
+# Onecta-call nodig had om een airco bij dreigende overbelasting uit te
+# zetten). Als tijdelijke oplossing, in afwachting van de Broadlink RM4c
+# mini IR-blaster, is toen eerst de push-temperatuur omlaag gezet (28 naar
+# 24 graden) en zijn er guard-condities toegevoegd om alleen daadwerkelijk
+# wijzigende commando's te versturen.
 #
-# 1) QUOTA-FIX: elke climate.set_temperature- en climate.set_fan_mode-
-#    aanroep wordt nu eerst vergeleken met de huidige stand van de airco,
-#    en alleen daadwerkelijk verstuurd als er echt iets wijzigt. In de
-#    oorspronkelijke versie belde de loop - die elke 30 seconden doorloopt
-#    zolang de woonkamer-airco in de winter aan het verwarmen is -
-#    onvoorwaardelijk naar de Daikin Onecta-cloud, dus 2x per minuut /
-#    120x per uur, ook als er niets te wijzigen was. Bij een quota van
-#    ~200 Onecta-calls/dag was dat quota daardoor al binnen ongeveer 1,5
-#    a 2 uur verwarmen volledig verbruikt - wat ook de andere Daikin-
-#    automatiseringen kan laten haperen, met name de
-#    overbelastingsbeveiliging (fase1/2/3), die zelf ook een geslaagde
-#    Onecta-call nodig heeft om een airco bij dreigende overbelasting uit
-#    te zetten. Dit is mogelijk ook de verklaring voor de eerdere "uit-
-#    commando kwam vaak niet aan"-problemen bij die automatiseringen (zie
-#    de UPDATE (14 oktober 2026)-aantekening in bijvoorbeeld
-#    airco-jason-uit-bij-overbelasting-fase3.yaml).
-#
-# 2) TIJDELIJK, totdat de Broadlink RM4c mini IR-blaster er is en de
-#    woonkamer-airco voor temperatuur/ventilator via IR i.p.v. de Onecta-
-#    cloud wordt aangestuurd: de push-stand is omlaag gezet van 28 naar 24
-#    graden, met de ventilator tijdens het pushen op stand "1" (was
-#    "quiet", de ventilator werd in de oorspronkelijke versie tijdens het
-#    pushen namelijk nooit aangepast) in plaats van "2" - een
-#    voorzichtiger tussenstap om te proberen met minder hete luchtstroom
-#    toch voldoende warmte te leveren. Nog niet in de praktijk getest; bij
-#    eerder handmatig proberen bleek deze airco om de 20 graden bij de
-#    Sonoff-sensor te halen soms echt de volle 28 graden nodig te hebben,
-#    dus het kan zijn dat 24 graden niet genoeg blijkt. Zo nodig: in de
-#    HA-geschiedenis van sensor.woonkamer_temperatuur_meter_temperatuur
-#    controleren of de kamer wel op temperatuur komt, en anders
-#    push_setpoint hieronder terugzetten naar 28.
+# UPDATE (22 oktober 2026): de Broadlink RM4c mini IR-blaster is er, en de
+# woonkamer-airco wordt voor verwarmen nu via IR aangestuurd met twee
+# losse scripts in plaats van rechtstreekse climate.set_temperature/
+# set_fan_mode-aanroepen naar de Onecta-cloud - dat maakt zowel de
+# quota-zorg hierboven als de guard-condities en de vaste push/idle-
+# setpoints (24/16 graden) overbodig; die logica zit nu in de scripts
+# zelf. De repeat-loop roept nu simpelweg een van de twee scripts aan, met
+# 1 graad hysterese om niet rond de grens te blijven schakelen:
+#   - sensor.woonkamer_temperatuur_meter_temperatuur >= gewenste
+#     temperatuur (input_text.woonkamertemperatuur) ->
+#     script.airco_idle_verwarmen_vast_naar_18_econo_quiet
+#   - sensor.woonkamer_temperatuur_meter_temperatuur <= gewenste
+#     temperatuur min 1 graad -> script.airco_aan_verwarmen_1_econo_quiet
+#   - daartussenin: geen actie, laatst gekozen stand blijft staan
+# Nog niet getest in de praktijk (stand: 22 oktober 2026) - bij een
+# eerstvolgende verwarmbeurt in de gaten houden of de kamer goed op
+# temperatuur komt en blijft, en of de scripts niet onnodig vaak opnieuw
+# worden aangeroepen terwijl de stand al goed staat (dat stuurt nu elke 30
+# seconden hetzelfde IR-commando opnieuw zolang de kamer binnen dezelfde
+# idle- of push-toestand blijft - zie je daar ongewenste neveneffecten van
+# bij de airco zelf, zoals een piepje per IR-commando, dan kunnen we een
+# guard toevoegen zodat een script alleen wordt aangeroepen bij een
+# daadwerkelijke overgang).
 #
 # Documentatiekopie - de echte automatisering staat in Home Assistant zelf.
 
@@ -63,10 +61,9 @@ description: >-
   winterstand (verwarmen) en swing stop, anders zomerstand (koelen) en
   swing aan. Altijd quiet, alleen voor de airco die is aangezet. Als de
   Woonkamer in de winter aangaat, blijft deze automatisering actief
-  (repeat) om via de Sonoff-sensor te schakelen tussen idle (16 graden,
-  ventilator quiet) en verwarmen (push, 24 graden, ventilator stand 1 -
-  tijdelijk, zie UPDATE in de bestandscommentaar) op basis van de helper
-  input_text.woonkamertemperatuur.
+  (repeat) om via IR-scripts te schakelen tussen idle en verwarmen op
+  basis van de helper input_text.woonkamertemperatuur en de Sonoff-
+  kamersensor.
 triggers:
   - trigger: climate.turned_on
     target:
@@ -151,69 +148,29 @@ actions:
       - repeat:
           sequence:
             - variables:
-                push_setpoint: 24.0
-                push_fan_mode: '1'
-                idle_setpoint: 16.0
-                idle_fan_mode: quiet
                 desired: "{{ states('input_text.woonkamertemperatuur') | float(21.0) }}"
-                room_now: "{{ states('sensor.woonkamer_temperatuur_meter_temperatuur') | float(0) }}"
-                daikin_setpoint_now: "{{ state_attr('climate.daikinap46344_room_temperature', 'temperature') | float(none) }}"
-                daikin_fan_now: "{{ state_attr('climate.daikinap46344_room_temperature', 'fan_mode') }}"
+                room_now: >-
+                  {{ states('sensor.woonkamer_temperatuur_meter_temperatuur') |
+                  float(0) }}
             - choose:
-                # Kamer al warm genoeg (of warmer): terug naar idle (16
-                # graden, ventilator quiet) - alleen de commando's sturen
-                # die daadwerkelijk nodig zijn.
+                # Gewenste temperatuur bereikt (of hoger): idle-script.
                 - conditions:
                     - condition: template
-                      value_template: "{{ room_now >= (desired + 0.5) }}"
+                      value_template: '{{ room_now >= desired }}'
                   sequence:
-                    - if:
-                        - condition: template
-                          value_template: >-
-                            {{ daikin_setpoint_now is none or
-                            (daikin_setpoint_now - idle_setpoint) | abs > 0.4 }}
-                      then:
-                        - action: climate.set_temperature
-                          target:
-                            entity_id: climate.daikinap46344_room_temperature
-                          data:
-                            temperature: "{{ idle_setpoint }}"
-                    - if:
-                        - condition: template
-                          value_template: "{{ daikin_fan_now != idle_fan_mode }}"
-                      then:
-                        - action: climate.set_fan_mode
-                          target:
-                            entity_id: climate.daikinap46344_room_temperature
-                          data:
-                            fan_mode: "{{ idle_fan_mode }}"
-                # Kamer nog te koud: naar de push-stand (24 graden,
-                # ventilator 1) - alleen de commando's sturen die
-                # daadwerkelijk nodig zijn.
+                    - action: script.turn_on
+                      target:
+                        entity_id: script.airco_idle_verwarmen_vast_naar_18_econo_quiet
+                # 1 graad onder de gewenste temperatuur gezakt: aan/push-script.
                 - conditions:
                     - condition: template
-                      value_template: "{{ room_now < desired }}"
+                      value_template: '{{ room_now <= (desired - 1) }}'
                   sequence:
-                    - if:
-                        - condition: template
-                          value_template: >-
-                            {{ daikin_setpoint_now is none or
-                            (daikin_setpoint_now - push_setpoint) | abs > 0.4 }}
-                      then:
-                        - action: climate.set_temperature
-                          target:
-                            entity_id: climate.daikinap46344_room_temperature
-                          data:
-                            temperature: "{{ push_setpoint }}"
-                    - if:
-                        - condition: template
-                          value_template: "{{ daikin_fan_now != push_fan_mode }}"
-                      then:
-                        - action: climate.set_fan_mode
-                          target:
-                            entity_id: climate.daikinap46344_room_temperature
-                          data:
-                            fan_mode: "{{ push_fan_mode }}"
+                    - action: script.turn_on
+                      target:
+                        entity_id: script.airco_aan_verwarmen_1_econo_quiet
+                # Daartussenin (desired - 1 tot desired): geen actie, laatst
+                # gekozen stand blijft staan (1 graad hysterese).
             - delay:
                 seconds: 30
           until:
