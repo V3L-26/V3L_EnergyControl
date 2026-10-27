@@ -1,1 +1,50 @@
-IyBWM0wgRW5lcmd5Q29udHJvbAoKRWlnZW4gQW5kcm9pZC1hcHAgKENhcGFjaXRvci9XZWJWaWV3KSB2b29yIGVlbiBIb21lV2l6YXJkIFAxLW1ldGVyLCBtZXQKU3VwYWJhc2UgYWxzIGJhY2tlbmQgZW4gSG9tZSBBc3Npc3RhbnQgYWxzIGJyb24gdm9vciB0YXJpZXZlbiwga29zdGVuLApzdG9yaW5nc2xvZ2JvZWsgZW4gb3ZlcmJlbGFzdGluZ3N3YWFyc2NodXdpbmdlbi4gT29yc3Byb25rZWxpamsgZWVuCmdlcmVwYWt0ZSB2ZXJzaWUgdmFuIGRlIFYzTCBFbmVyZ3lDb250cm9sLWFwcCAoYG5sLnYzbC5ob21ld2l6YXJkY2xpZW50YCkKbWV0IGF1dG9tYXRpc2NoZSBsb2dpbiB0b2VnZXZvZWdkOyBzaW5kc2RpZW4gZmxpbmsgdWl0Z2VicmVpZC4KCj4gKipVcGRhdGUgKDI3IG9rdG9iZXIgMjAyNik6KiogZGV6ZSByZXBvc2l0b3J5IGlzIGhlcm9yZ2FuaXNlZXJkIHRvdAo+IGFsbGVlbi1hcHAtcmVwbyAoYFYzTF9FbmVyZ3lDb250cm9sYCkuIERlIG1hcHBlbiBgaG9tZS1hc3Npc3RhbnQvYCBlbgo+IGBzdXBhYmFzZS9gIHppam4gdmVyd2lqZGVyZCAtIGRlIEhvbWUgQXNzaXN0YW50LWF1dG9tYXRpc2VyaW5nZW4gZW4gaGV0Cj4gU3VwYWJhc2Utc2NoZW1hIGxldmVuIGFsbGVlbiBub2cgaW4gSG9tZSBBc3Npc3RhbnQvU3VwYWJhc2UgemVsZiAoZW4KPiBpbiBkZSBWM0wgRW5lcmd5Q29udHJvbC1wcm9qZWN0Y2hhdCksIG5pZXQgbGFuZ2VyIGFscyBrb3BpZSBpbiBlZW4KPiBHaXRIdWItcmVwby4KCiMjIFN0cnVjdHV1cgoKLSBgYXBwL2AgLSBkZSB3ZWJpbmhvdWQgdmFuIGRlIEFQSyAoYGluZGV4Lmh0bWxgKSwgbWV0IGRlIGNoYW5nZWxvZyB2YW4gZGUKICBodWlkaWdlIHZlcnNpZQoKRGl0IGlzIGdlZW4gZGVwbG95LXBpcGVsaW5lOiB3aWp6aWdpbmdlbiBtYWFrIGplIGRpcmVjdCBpbiBgYXBwL2luZGV4Lmh0bWxgCmVuIHB1c2gganplIG5hYXIgZGV6ZSByZXBvLgoKIyMgSG9lIGRlIGFwcCB3ZXJrdAoKRGUgYXBwIChgYXBwL2luZGV4Lmh0bWxgKSBwcmFhdCByZWNodHN0cmVla3MgbWV0IGRlIFAxLW1ldGVyIGFscyBoaWogb3AKaGV0emVsZmRlIG5ldHdlcmsgeml0LCBlbiB2YWx0IGFuZGVycyB0ZXJ1ZyBvcCBTdXBhYmFzZQooYGxhdGVzdF9zdGF0dXNgL2BnZXRfZGFpbHlfdG90YWxzYC9gZGFpbHlfY29zdGApLiBUYXJpZXZlbiB6aWpuCmFsbGVlbi1sZXplbiBpbiBkZSBhcHA7IGRlIHZhc3RlIG92ZXJiZWxhc3RpbmdzZHJlbXBlbCBzdGFhdCBvcCA1MjUwIFcuClNpbmRzIHZlcnNpZSAzLjY3IGRvZXQgZGUgYXBwIHplbGYgZ2VlbiBvdmVyYmVsYXN0aW5nc21haWwgb2YKc3RvcmluZ3Nsb2dib2VrIG1lZXIgLSBkYXQgaXMgdWl0c2x1aXRlbmQgSG9tZSBBc3Npc3RhbnQsIG9tIGR1YmJlbGUKbWVsZGluZ2VuIHRlIHZvb3Jrb21lbi4gRGUgYWNodGVyZ3JvbmQgbG9naWNhIChIb21lIEFzc2lzdGFudC1hdXRvbWF0aXNlcmluZ2VuLApTdXBhYmFzZS1zY2hlbWEgZW4gLWZ1bmN0aWVzKSBzdGFhdCBuaWV0IGxhbmdlciBpbiBkZXplIHJlcG8gLSB6aWUgZGUKcHJvamVjdGNoYXQgdm9vciBkZSBhY3R1ZWxlIHN0YW5kIHZhbiB6YWtlbiBkYWFyb3Zlci4KCiMjIEVlbiBuaWV1d2UgQVBLIGJvdXdlbgoKRXIgaXMgZ2VlbiBnZWF1dG9tYXRpc2VlcmQgYnVpbGRzY3JpcHQgaW4gZGV6ZSByZXBvc2l0b3J5OyBkZSBBUEsgaXMgdG90IG51CnRvZSB0ZWxrZW5zIGhhbmRtYXRpZyBnZXJlcGFrdDoKCjEuIFBhcyBgYXBwL2luZGV4Lmh0bWxgIGFhbiBlbiB2ZXJob29nIGBBUFBfVkVSU0lPTmAvYEFQUF9VUERBVEVEYC4KMi4gUGFrIGVlbiBlZXJkZXJlLCB3ZXJrZW5kZSBBUEsgdWl0IChaaXApLCB2ZXJ2YW5nCiAgIGBhc3NldHMvcHVibGljL2luZGV4Lmh0bWxgLCBlbiB2ZXJ3aWpkZXIgZGUgb3VkZQogICBoYW5kdGVrZW5pbmdzYmVzdGFuZGVuIChgTUVUQS1JTkYvKi5TRmAsIGAqLlJTQWAvYCouRFNBYC9gKi5FQ2AsCiAgIGBNQU5JRkVTVC5NRmApLgozLiBaaXAgZGUgQVBLIG9wbmlldXcgbWV0IGRlemVsZmRlIGNvbXByZXNzaWVtZXRob2Rlbi4KNC4gWmlwYWxpZ24gZW4gb25kZXJ0ZWtlbiBtZXQgYHViZXItYXBrLXNpZ25lcmAKICAgKGh0dHBzOi8vZ2l0aHViLmNvbS9wYXRyaWNrZmF2L3ViZXItYXBrLXNpZ25lciksIG1ldCBlZW4gZGVidWcta2V5c3RvcmUKICAgem9kYXQgZGUgaGFuZHRla2VuaW5nIGdlbGlqayBibGlqZnQgYWFuIGVlcmRlcmUgYnVpbGRzIC0gYW5kZXJzIG1vZXQgZGUKICAgdm9yaWdlIHZlcnNpZSBlZXJzdCB2YW4gaGV0IHRvZXN0ZWwgdmVyd2lqZGVyZCB3b3JkZW4gdm9vciBpbnN0YWxsYXRpZS4K
+# V3L EnergyControl
+
+Eigen Android-app (Capacitor/WebView) voor een HomeWizard P1-meter, met
+Supabase als backend en Home Assistant als bron voor tarieven, kosten,
+storingslogboek en overbelastingswaarschuwingen. Oorspronkelijk een
+gerepackte versie van de V3L EnergyControl-app (`nl.v3l.homewizardclient`)
+met automatische login toegevoegd; sindsdien flink uitgebreid.
+
+> **Update (27 oktober 2026):** deze repository is gereorganiseerd tot
+> alleen-app-repo (`V3L_EnergyControl`). De mappen `home-assistant/` en
+> `supabase/` zijn verwijderd - de Home Assistant-automatiseringen en het
+> Supabase-schema leven alleen nog in Home Assistant/Supabase zelf (en
+> in de V3L EnergyControl-projectchat), niet langer als kopie in een
+> GitHub-repo.
+
+## Structuur
+
+- `app/` - de webinhoud van de APK (`index.html`), met de changelog van de
+  huidige versie
+
+Dit is geen deploy-pipeline: wijzigingen maak je direct in `app/index.html`
+en push je naar deze repo.
+
+## Hoe de app werkt
+
+De app (`app/index.html`) praat rechtstreeks met de P1-meter als hij op
+hetzelfde netwerk zit, en valt anders terug op Supabase
+(`latest_status`/`get_daily_totals`/`daily_cost`). Tarieven zijn
+alleen-lezen in de app; de vaste overbelastingsdrempel staat op 5250 W.
+Sinds versie 3.67 doet de app zelf geen overbelastingsmail of
+storingslogboek meer - dat is uitsluitend Home Assistant, om dubbele
+meldingen te voorkomen. De achtergrondlogica (Home Assistant-automatiseringen,
+Supabase-schema en -functies) staat niet langer in deze repo - zie de
+projectchat voor de actuele stand van zaken daarover.
+
+## Een nieuwe APK bouwen
+
+Er is geen geautomatiseerd buildscript in deze repository; de APK is tot nu
+toe telkens handmatig gerepackt:
+
+1. Pas `app/index.html` aan en verhoog `APP_VERSION`/`APP_UPDATED`.
+2. Pak een eerdere, werkende APK uit (zip), vervang
+   `assets/public/index.html`, en verwijder de oude
+   handtekeningbestanden (`META-INF/*.SF`, `*.RSA`/`*.DSA`/`*.EC`,
+   `MANIFEST.MF`).
+3. Zip de APK opnieuw met dezelfde compressiemethoden.
+4. Zipalign en onderteken met `uber-apk-signer`
+   (https://github.com/patrickfav/uber-apk-signer), met een debug-keystore
+   zodat de handtekening gelijk blijft aan eerdere builds - anders moet de
+   vorige versie eerst van het toestel verwijderd worden voor installatie.
