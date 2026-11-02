@@ -3,6 +3,32 @@
 Volledige changelog staat ook in de app zelf (pagina "Versie"). Dit is een
 overzicht op hoofdlijnen van wat er in dit project is gewijzigd.
 
+## 3.82
+Homescreen-tegels herzien. De fase-tegels (L1/L2/L3) tonen nu alleen nog
+"L1"/"L2"/"L3" (niet meer "Fase x (Lx)") en de spanning/stroom-regel (V/A)
+onder de staafmeter is weg - wel nog te zien in de vergrote popup bij tikken
+op een tegel. De kleurstaven zelf (groen/geel/rood naar gelang de waarde)
+zijn ongewijzigd; alleen de breedte van de tegels is verkleind.
+
+De woonkamer-tegel is nu een smalle verticale stapel in plaats van een
+wijzerschijf: Binnen (voorheen "Huidig"), daaronder Gewenst (plat cijfer,
+groen, tikken erop opent dezelfde instel-popup als voorheen) en daaronder
+AC. Niet meer de hele tegel maar alleen het "Gewenst"-blok is nu het
+tikdoel.
+
+Nieuwe Buienradar-tegel naast de woonkamer-tegel: buitentemperatuur, een
+korte regen/zon-verwachting en een live radarkaartje (rechtstreeks het
+publieke beeld van buienradar.nl). Gevoed door een nieuwe Home
+Assistant-automatisering (`home-assistant/automations/buienradar-naar-supabase-pushen.yaml`)
+die elke 10 minuten naar de nieuwe Supabase-tabel `weather_status` schrijft.
+
+Tijdens het inbouwen bleek dat de Buienradar-integratie in Home Assistant
+geen uurvoorspelling ondersteunt (`weather.buienradar` heeft
+`supported_features: 1`, alleen dagvoorspelling) - de regenverwachting
+("regen over X minuten") komt daarom niet uit `weather.get_forecasts`, maar
+rechtstreeks uit de fijnmazige (5 minuten/~2 uur vooruit) neerslagradar van
+buienradar.nl zelf, via een los `rest_command` (`buienradar_nowcast`).
+
 ## 3.71
 Noodfix: 3.70 opende leeg (alle meters op 0). Oorzaak: de nieuwe
 instelbare-overbelastingsgrens-code riep bij het opstarten meteen
