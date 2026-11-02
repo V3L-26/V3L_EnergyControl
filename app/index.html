@@ -668,7 +668,11 @@
      balk is dus in feite altijd helemaal gekleurd, alleen het bovenste stuk
      is verborgen. De scheidingslijn (.bar-marker) markeert de exacte waarde. */
   .home-top-row{display:flex;gap:14px;flex-wrap:wrap;align-items:stretch;}
-  #phaseCardsRow .bar-card{flex:0 1 108px;min-width:92px;text-align:center;position:relative;}
+  /* Sinds 3.82: "Fase x" is vervallen (alleen nog L1/L2/L3) en de V/A-regel
+     onder de staaf is weg (die blijft wel in de vergrote popup bij tikken op
+     een tegel, zie .meter-modal-card hieronder) - de tegel kan daardoor
+     flink smaller, flex-basis/min-width zijn navenant verkleind. */
+  #phaseCardsRow .bar-card{flex:0 1 78px;min-width:68px;padding:14px 10px;text-align:center;position:relative;}
   .bar-expand-icon{position:absolute;top:14px;right:14px;width:13px;height:13px;color:var(--muted);opacity:.55;}
   .bar-wrap{position:relative;display:flex;justify-content:center;margin-top:6px;}
   .bar-track{
@@ -691,27 +695,45 @@
   .meter-modal-card .bar-num{font-size:clamp(38px, 11vw, 56px);}
   .meter-modal-card .bar-unit{font-size:16px;}
 
-  /* Thermostaat-tegel (sinds 3.72): toont de huidige en de ingestelde
-     temperatuur van de woonkamer. De hele tegel is aantikbaar/klikbaar op
-     ELK apparaat (niet alleen touch zoals bij de fase-tegels hierboven) -
-     dit is een bediening, geen alleen-lezen vergroting, en opent een popup
-     om de ingestelde waarde aan te passen. */
+  /* Thermostaat-tegel (sinds 3.72, verticale stapel sinds 3.82): toont de
+     binnentemperatuur, de gewenste temperatuur en het AC-setpoint onder
+     elkaar. Niet meer de hele tegel, maar alleen het "Gewenst"-blok is
+     aantikbaar/klikbaar op ELK apparaat (niet alleen touch zoals bij de
+     fase-tegels hierboven) - dat is een bediening, geen alleen-lezen
+     vergroting, en opent een popup om de ingestelde waarde aan te passen. */
   .thermo-card{
-    flex:1 1 300px;min-width:260px;cursor:pointer;
+    flex:0 1 130px;min-width:112px;cursor:default;
     display:flex;flex-direction:column;align-items:center;
   }
-  .thermo-card:hover{background:linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));}
   .thermo-card .label{align-self:flex-start;}
-  .thermo-card .thermo-sub{font-size:14px;font-weight:700;margin-top:2px;align-self:flex-start;}
-  .thermo-row{display:flex;align-items:flex-start;justify-content:center;gap:24px;margin:16px 0 4px;}
+  .thermo-stack{display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:14px;width:100%;}
+  .thermo-block{text-align:center;width:100%;}
+  .thermo-block.gewenst{
+    cursor:pointer;border-radius:12px;padding:4px 6px;margin:-4px -6px;
+    transition:background .15s ease;
+  }
+  .thermo-block.gewenst:hover, .thermo-block.gewenst:active{background:rgba(45,212,191,0.12);}
+  .thermo-block.gewenst .thermo-current-num{color:var(--total);border-bottom:2px dotted rgba(52,211,153,0.5);}
+  .thermo-block.gewenst .thermo-current-label{color:var(--total);}
+  .thermo-block.ac .thermo-current-num{color:var(--muted);}
   .thermo-current-label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;}
-  .thermo-current-num{font-size:52px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;}
-  .thermo-dial-wrap{position:relative;width:188px;height:188px;flex-shrink:0;}
-  .thermo-dial-wrap svg{width:100%;height:100%;display:block;}
-  .thermo-dial-readout{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
-  .thermo-target-num{font-size:52px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;}
-  .thermo-deg{font-size:20px;font-weight:600;color:var(--muted);}
-  .thermo-ac-label{margin-top:56px;}
+  .thermo-current-num{font-size:30px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;}
+  .thermo-deg{font-size:14px;font-weight:600;color:var(--muted);}
+
+  /* Buienradar-tegel (sinds 3.82): buitentemperatuur + korte verwachting +
+     live radarkaartje (publiek beeld van buienradar.nl, buiten Supabase om). */
+  .weer-card{flex:1 1 220px;min-width:190px;align-items:stretch;text-align:left;}
+  .weer-card .label{align-self:flex-start;}
+  .weer-top{display:flex;align-items:center;gap:12px;margin:10px 0 8px;}
+  .weer-icon{width:30px;height:30px;flex-shrink:0;display:inline-flex;color:var(--warn);}
+  .weer-icon svg{width:100%;height:100%;display:block;}
+  .weer-temp{font-size:30px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;}
+  .weer-forecast{font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px;min-height:16px;}
+  .radar-map{
+    width:100%;aspect-ratio:1/1;max-height:220px;border-radius:12px;overflow:hidden;
+    background:#0b1220;border:1px solid var(--panel-border);
+  }
+  .radar-map img{width:100%;height:100%;object-fit:cover;display:block;}
 
   .thermo-modal-card{width:min(88vw, 340px);padding:36px 26px;text-align:center;}
   .thermo-modal-card .label{font-size:14px;margin-bottom:4px;}
@@ -740,42 +762,40 @@
   @media (min-width: 900px){
     .wrap{max-width:min(1600px, 94vw);}
     .home-top-row{gap:20px;}
-    /* Verdeling (sinds 3.73): fase-tegels iets breder gemaakt; de
-       thermostaat-tegel staat op flex:1 (zie .thermo-card hierboven) en
-       wordt daardoor automatisch smaller - er is geen vaste pixelbreedte
-       voor de thermotegel die apart bijgehouden moet worden. */
-    #phaseCardsRow .bar-card{flex:0 0 208px;min-width:182px;padding:26px 20px;}
+    /* Sinds 3.82: fase-tegels en de woonkamer-tegel juist zo smal mogelijk
+       (geen "Fase x"/V-A meer, geen wijzerschijf meer) - de vrijgekomen
+       breedte gaat naar de nieuwe Buienradar-tegel (.weer-card, flex:1). */
+    #phaseCardsRow .bar-card{flex:0 0 130px;min-width:112px;padding:18px 12px;}
     #phaseCardsRow .label{font-size:15px;}
-    .bar-track{width:54px;height:clamp(200px, 38vh, 340px);}
+    .bar-track{width:44px;height:clamp(180px, 34vh, 300px);}
     .bar-readout{margin-top:16px;}
-    .bar-num{font-size:34px;}
+    .bar-num{font-size:30px;}
     .bar-unit{font-size:16px;}
-    .thermo-card{min-width:380px;padding:28px;}
+    .thermo-card{flex:0 0 170px;min-width:150px;padding:20px 16px;}
     .thermo-card .label{font-size:14px;}
-    .thermo-card .thermo-sub{font-size:16px;}
-    .thermo-row{gap:36px;margin:24px 0 6px;}
+    .thermo-stack{gap:20px;margin-top:18px;}
     .thermo-current-label{font-size:13px;}
-    .thermo-current-num, .thermo-target-num{font-size:clamp(52px, 9vh, 88px);}
-    .thermo-dial-wrap{width:clamp(188px, 36vh, 320px);height:clamp(188px, 36vh, 320px);}
-    .thermo-deg{font-size:26px;}
+    .thermo-current-num{font-size:clamp(34px, 6vh, 52px);}
+    .thermo-deg{font-size:18px;}
+    .weer-card{min-width:260px;padding:24px;}
+    .weer-card .label{font-size:14px;}
+    .weer-temp{font-size:38px;}
+    .weer-forecast{font-size:15px;}
   }
 
   @media (max-width: 600px){
-    .thermo-row{gap:14px;}
-    .thermo-dial-wrap{width:150px;height:150px;}
-    .thermo-target-num, .thermo-current-num{font-size:38px;}
-    .thermo-deg{font-size:16px;}
-    /* Alleen op telefoon (niet op tablet, zie de 900px-media query
-       hierboven) iets minder ruimte boven "AC unit", zodat AC unit + de
-       waarde beter verdeeld in de tegel staan. */
-    .thermo-ac-label{margin-top:34px;}
+    .thermo-stack{gap:10px;}
+    .thermo-current-num{font-size:30px;}
+    .thermo-deg{font-size:14px;}
   }
   @media (max-width: 380px){
-    #phaseCardsRow .bar-card{flex-basis:84px;padding:10px 6px;}
-    .bar-track{width:24px;height:140px;}
-    .bar-num{font-size:18px;}
-    .thermo-row{flex-direction:column;align-items:center;gap:10px;}
-    .thermo-dial-wrap{width:130px;height:130px;}
+    #phaseCardsRow .bar-card{flex-basis:62px;padding:8px 4px;}
+    .bar-track{width:20px;height:120px;}
+    .bar-num{font-size:16px;}
+    .thermo-card{flex-basis:100px;min-width:90px;}
+    .thermo-stack{gap:8px;}
+    .thermo-current-num{font-size:22px;}
+    .weer-card{min-width:170px;}
   }
 
   /* Popup met vergrote fase-meter - alleen actief op touch-apparaten (zie JS: pointer:coarse),
@@ -997,11 +1017,25 @@
     #phaseCardsRow .label{font-size:9px;letter-spacing:.03em;margin-bottom:4px;}
     #phaseCardsRow .bar-num{font-size:clamp(15px, 6vw, 24px);}
     #phaseCardsRow .bar-unit{font-size:clamp(8px, 2.2vw, 11px);margin-left:2px;}
-    #phaseCardsRow .stats{gap:6px;font-size:clamp(8px, 2.2vw, 11px);margin-top:6px;flex-wrap:wrap;}
     #phaseCardsRow .sub{font-size:9px;min-height:10px;margin-top:4px;}
     #phaseCardsRow .volt-bolt-row{margin:-2px 0 2px;}
     #phaseCardsRow .volt-bolt-row .volt-bolt svg{width:17px;height:17px;}
     #phaseCardsRow .volt-status{font-size:9px;min-height:10px;}
+
+    /* Woonkamer-tegel: zelfde compacte behandeling als de fase-tegels hierboven. */
+    .thermo-card{padding:10px 8px;}
+    .thermo-card .label{font-size:9px;letter-spacing:.03em;margin-bottom:4px;}
+    .thermo-current-label{font-size:8px;}
+    .thermo-current-num{font-size:clamp(15px, 6vw, 22px);}
+    .thermo-deg{font-size:11px;}
+    .thermo-stack{gap:8px;margin-top:8px;}
+
+    /* Buienradar-tegel op telefoon: iets compacter, kaartje blijft vierkant. */
+    .weer-card{padding:12px 10px;min-width:150px;}
+    .weer-icon{width:22px;height:22px;}
+    .weer-temp{font-size:22px;}
+    .weer-forecast{font-size:11px;}
+    .radar-map{max-height:160px;}
   }
 
   @media (max-width: 380px){
@@ -1262,7 +1296,7 @@
     <div class="home-top-row" id="homeTopRow">
       <div class="card-row" id="phaseCardsRow">
         <div class="card l1 bar-card" id="cardL1">
-          <div class="label" id="l1Label">Fase 1 (L1)</div>
+          <div class="label" id="l1Label">L1</div>
           <svg class="bar-expand-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 3H3v6M15 3h6v6M9 21H3v-6M15 21h6v-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <div class="bar-wrap">
             <div class="bar-track">
@@ -1274,13 +1308,9 @@
           <div class="volt-bolt-row"><span class="volt-bolt calm" id="l1Bolt" title=""><svg viewBox="0 0 24 24"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" fill="currentColor"/></svg></span></div>
           <div class="sub" id="l1Sub">&nbsp;</div>
           <div class="volt-status" id="l1VoltStatus"></div>
-          <div class="stats">
-            <span><b id="l1Voltage">&mdash;</b> V</span>
-            <span><b id="l1Current">&mdash;</b> A</span>
-          </div>
         </div>
         <div class="card l2 bar-card" id="cardL2">
-          <div class="label" id="l2Label">Fase 2 (L2)</div>
+          <div class="label" id="l2Label">L2</div>
           <svg class="bar-expand-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 3H3v6M15 3h6v6M9 21H3v-6M15 21h6v-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <div class="bar-wrap">
             <div class="bar-track">
@@ -1292,13 +1322,9 @@
           <div class="volt-bolt-row"><span class="volt-bolt calm" id="l2Bolt" title=""><svg viewBox="0 0 24 24"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" fill="currentColor"/></svg></span></div>
           <div class="sub" id="l2Sub">&nbsp;</div>
           <div class="volt-status" id="l2VoltStatus"></div>
-          <div class="stats">
-            <span><b id="l2Voltage">&mdash;</b> V</span>
-            <span><b id="l2Current">&mdash;</b> A</span>
-          </div>
         </div>
         <div class="card l3 bar-card" id="cardL3">
-          <div class="label" id="l3Label">Fase 3 (L3)</div>
+          <div class="label" id="l3Label">L3</div>
           <svg class="bar-expand-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 3H3v6M15 3h6v6M9 21H3v-6M15 21h6v-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <div class="bar-wrap">
             <div class="bar-track">
@@ -1310,22 +1336,17 @@
           <div class="volt-bolt-row"><span class="volt-bolt calm" id="l3Bolt" title=""><svg viewBox="0 0 24 24"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" fill="currentColor"/></svg></span></div>
           <div class="sub" id="l3Sub">&nbsp;</div>
           <div class="volt-status" id="l3VoltStatus"></div>
-          <div class="stats">
-            <span><b id="l3Voltage">&mdash;</b> V</span>
-            <span><b id="l3Current">&mdash;</b> A</span>
-          </div>
         </div>
       </div>
 
-      <!-- Thermostaat-tegel: toont de huidige en ingestelde temperatuur. De
-           hele tegel is de tikdoel; tikken opent een popup om de ingestelde
-           waarde te wijzigen (zie #thermoModalBackdrop hieronder). "Huidig"
-           komt sinds 3.73 uit de Sonoff-temperatuursensor (via Supabase).
-
-           Sinds 3.76: de losse ondertitel "Gewenste temperatuur" onder
-           "Woonkamer" is vervallen; in plaats daarvan staat er nu net als
-           bij "Huidig" een eigen label "Gewenst" boven de wijzerschijf, zodat
-           beide kolommen er symmetrisch uitzien.
+      <!-- Thermostaat-tegel: toont de binnentemperatuur, de gewenste
+           temperatuur en het AC-setpoint, verticaal gestapeld (sinds 3.82;
+           verving de eerdere brede 2-koloms opzet met wijzerschijf). Niet
+           meer de hele tegel, maar alleen het "Gewenst"-blok is de tikdoel;
+           tikken daarop opent de bestaande popup om de ingestelde waarde te
+           wijzigen (zie #thermoModalBackdrop hieronder). "Binnen" (tot 3.81
+           "Huidig" genoemd) komt uit de Sonoff-temperatuursensor (via
+           Supabase).
 
            UPDATE 23 oktober 2026: de aan/uit-toggle (sinds 3.77) is weer
            verwijderd - de airco wordt voortaan uitsluitend handmatig in de
@@ -1334,33 +1355,39 @@
            staat (dat gedrag, sinds 3.74, is samen met de toggle vervallen):
            de ingestelde temperatuur blijft altijd zichtbaar en blijft altijd
            gewoon wijzigbaar, ongeacht de aan/uit-status van de airco. -->
-      <div class="card thermo-card" id="thermoCard" role="button" tabindex="0" aria-label="Gewenste temperatuur woonkamer instellen">
+      <div class="card thermo-card" id="thermoCard">
         <div class="label" id="thermoLabel">Woonkamer</div>
-        <div class="thermo-row">
-          <div style="text-align:center;">
-            <div class="thermo-current-label" id="thermoCurrentLabel">Huidig</div>
+        <div class="thermo-stack">
+          <div class="thermo-block binnen">
+            <div class="thermo-current-label" id="thermoCurrentLabel">Binnen</div>
             <div class="thermo-current-num"><span id="thermoCurrentTemp">&mdash;</span><span class="thermo-deg">&deg;C</span></div>
-            <div class="thermo-current-label thermo-ac-label" id="thermoAcLabel">AC unit</div>
+          </div>
+          <div class="thermo-block gewenst" id="thermoGewenstBlock" role="button" tabindex="0" aria-label="Gewenste temperatuur woonkamer instellen">
+            <div class="thermo-current-label" id="thermoTargetLabel">Gewenst</div>
+            <div class="thermo-current-num"><span id="thermoTargetTemp">&mdash;</span><span class="thermo-deg">&deg;C</span></div>
+          </div>
+          <div class="thermo-block ac">
+            <div class="thermo-current-label" id="thermoAcLabel">AC</div>
             <div class="thermo-current-num"><span id="thermoAcTemp">&mdash;</span><span class="thermo-deg">&deg;C</span></div>
           </div>
-          <div style="text-align:center;">
-            <div class="thermo-current-label" id="thermoTargetLabel">Gewenst</div>
-            <div class="thermo-dial-wrap">
-              <svg viewBox="0 0 200 200" style="transform:rotate(-90deg);">
-                <circle cx="100" cy="100" r="86" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="14"></circle>
-                <circle cx="100" cy="100" r="86" fill="none" stroke="url(#thermoGrad)" stroke-width="14" stroke-linecap="round" stroke-dasharray="540.4" stroke-dashoffset="330"></circle>
-                <defs>
-                  <linearGradient id="thermoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#2dd4bf"></stop>
-                    <stop offset="100%" stop-color="#14b8a6"></stop>
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div class="thermo-dial-readout">
-                <div class="thermo-target-num" id="thermoTargetNumWrap"><span id="thermoTargetTemp">&mdash;</span><span class="thermo-deg">&deg;C</span></div>
-              </div>
-            </div>
-          </div>
+        </div>
+      </div>
+
+      <!-- Buienradar-tegel (sinds 3.82): buitentemperatuur + korte
+           regen/zon-verwachting uit de Buienradar-integratie in Home
+           Assistant (via Supabase, tabel weather_status - zie
+           refreshWeatherStatus() verderop). Het radarkaartje zelf is het
+           live, publieke beeld van buienradar.nl - dat loopt buiten
+           Supabase om, rechtstreeks vanaf het apparaat. -->
+      <div class="card weer-card" id="weerCard">
+        <div class="label" id="weerLabel">Buienradar</div>
+        <div class="weer-top">
+          <span class="weer-icon" id="weerIcon"></span>
+          <div class="weer-temp"><span id="weerTemp">&mdash;</span><span class="thermo-deg">&deg;C</span></div>
+        </div>
+        <div class="weer-forecast" id="weerForecast">&nbsp;</div>
+        <div class="radar-map">
+          <img id="radarImg" src="https://image.buienradar.nl/2.0/image/sprite/WeatherMapRainRadarLargeNL?w=500&amp;h=500" alt="" loading="lazy">
         </div>
       </div>
     </div>
@@ -1726,6 +1753,11 @@
   <div class="table-panel">
     <div class="section-title" id="changelogTitleText">Versie</div>
     <div class="log-scroll changelog-scroll" id="changelogBody">
+        <div class="changelog-entry"><h4>3.82</h4><ul>
+          <li>Fase-tegels (L1/L2/L3): tonen nu alleen nog "L1"/"L2"/"L3" (niet meer "Fase x (Lx)") en de spanning/stroom-regel (V/A) onder de staafmeter is weg - die blijft wel te zien in de vergrote popup bij tikken op een tegel. De tegels zijn daardoor een stuk smaller gemaakt.</li>
+          <li>Woonkamer-tegel: de wijzerschijf voor de gewenste temperatuur is vervallen, de tegel is nu een smalle verticale stapel: Binnen (voorheen "Huidig"), daaronder Gewenst (plat cijfer, groen, tikken erop opent dezelfde instel-popup als voorheen) en daaronder AC. Niet meer de hele tegel maar alleen het "Gewenst"-blok is nu de tikdoel.</li>
+          <li>Nieuwe Buienradar-tegel naast de woonkamer-tegel: buitentemperatuur en een korte regen/zon-verwachting (uit Home Assistant's Buienradar-integratie via Supabase, tabel weather_status), plus een live radarkaartje (rechtstreeks het publieke beeld van buienradar.nl).</li>
+        </ul></div>
         <div class="changelog-entry"><h4>3.81</h4><ul>
           <li>Aan/uit-toggle bij de thermostaat-tegel weer verwijderd - de airco wordt voortaan uitsluitend handmatig in de Daikin Onecta-app aan/uitgezet.</li>
           <li>Het grote cijfer toont daardoor niet meer "UIT" zolang de airco uitstaat: de ingestelde temperatuur blijft altijd zichtbaar en blijft altijd gewoon wijzigbaar.</li>
@@ -2174,7 +2206,7 @@
   // ze worden onder de copyrightregel in de footer getoond.
   // Versienummering: x.y - y loopt 0 t/m 9, daarna x+1 en y terug naar 0
   // (dus ...3.8, 3.9, 4.0, 4.1, ...).
-  const APP_VERSION = '3.81';
+  const APP_VERSION = '3.82';
   const APP_UPDATED = '23-10-2026';
   const APP_UPDATED_TIME = '17:55:49';
   const ipInput = $('ipInput');
@@ -2368,8 +2400,8 @@
   function closeThermoModal(){
     $('thermoModalBackdrop').classList.remove('open');
   }
-  $('thermoCard').addEventListener('click', openThermoModal);
-  $('thermoCard').addEventListener('keydown', (e) => {
+  $('thermoGewenstBlock').addEventListener('click', openThermoModal);
+  $('thermoGewenstBlock').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openThermoModal(); }
   });
   $('thermoModalBackdrop').addEventListener('click', (e) => {
@@ -2443,9 +2475,13 @@
       elecPriceField: 'Tarief stroom (€/kWh)', gasPriceField: 'Tarief gas (€/m³)',
       connect: 'Verbinden', connected: 'Verbonden',
       totalPower: 'Totaal vermogen', dailyCostLabel: 'Elektra', gasCostLabel: 'Gas',
-      thermoLabel: 'Woonkamer', thermoSubLabel: 'Gewenste temperatuur', thermoCurrentLabel: 'Huidig', thermoTargetLabel: 'Gewenst',
-      thermoAcLabel: 'AC unit',
+      thermoLabel: 'Woonkamer', thermoSubLabel: 'Gewenste temperatuur', thermoCurrentLabel: 'Binnen', thermoTargetLabel: 'Gewenst',
+      thermoAcLabel: 'AC',
       thermoPopupHint: 'Wordt via Supabase doorgezet naar Home Assistant.',
+      weerLabel: 'Buienradar',
+      weatherDry: 'Blijft droog',
+      weatherNow: 'Nu regen',
+      weatherUntil: (hhmm) => 'Droog tot ongeveer ' + hhmm + ', dan kans op regen',
       voltBoltTitle: (s) => s === 'critical' ? 'Netcongestie mogelijk - spanning ver van 230V' : (s === 'warn' ? 'Lichte netstress - spanning wijkt af van 230V' : 'Netspanning stabiel'),
       voltOverloaded: 'Overbelast', voltUnderloaded: 'Onderbelast',
       monthlyCostsTitle: 'Kosten per maand',
@@ -2562,9 +2598,13 @@
       elecPriceField: 'Electricity rate (€/kWh)', gasPriceField: 'Gas rate (€/m³)',
       connect: 'Connect', connected: 'Connected',
       totalPower: 'Total power', dailyCostLabel: 'Electricity', gasCostLabel: 'Gas',
-      thermoLabel: 'Living room', thermoSubLabel: 'Target temperature', thermoCurrentLabel: 'Now', thermoTargetLabel: 'Target',
+      thermoLabel: 'Living room', thermoSubLabel: 'Target temperature', thermoCurrentLabel: 'Indoor', thermoTargetLabel: 'Target',
       thermoAcLabel: 'AC',
       thermoPopupHint: 'Synced to Home Assistant via Supabase.',
+      weerLabel: 'Rain radar',
+      weatherDry: 'Staying dry',
+      weatherNow: 'Raining now',
+      weatherUntil: (hhmm) => 'Dry until about ' + hhmm + ', then rain likely',
       voltBoltTitle: (s) => s === 'critical' ? 'Possible grid congestion - voltage far from 230V' : (s === 'warn' ? 'Mild grid stress - voltage deviating from 230V' : 'Grid voltage stable'),
       voltOverloaded: 'Overloaded', voltUnderloaded: 'Underloaded',
       monthlyCostsTitle: 'Costs per month',
@@ -2681,9 +2721,13 @@
       elecPriceField: 'Strompreis (€/kWh)', gasPriceField: 'Gaspreis (€/m³)',
       connect: 'Verbinden', connected: 'Verbunden',
       totalPower: 'Gesamtleistung', dailyCostLabel: 'Strom', gasCostLabel: 'Gas',
-      thermoLabel: 'Wohnzimmer', thermoSubLabel: 'Gewünschte Temperatur', thermoCurrentLabel: 'Jetzt', thermoTargetLabel: 'Soll',
+      thermoLabel: 'Wohnzimmer', thermoSubLabel: 'Gewünschte Temperatur', thermoCurrentLabel: 'Innen', thermoTargetLabel: 'Soll',
       thermoAcLabel: 'AC',
       thermoPopupHint: 'Wird über Supabase an Home Assistant übertragen.',
+      weerLabel: 'Regenradar',
+      weatherDry: 'Bleibt trocken',
+      weatherNow: 'Jetzt Regen',
+      weatherUntil: (hhmm) => 'Trocken bis etwa ' + hhmm + ', danach Regen möglich',
       voltBoltTitle: (s) => s === 'critical' ? 'Mögliche Netzüberlastung - Spannung weit von 230V entfernt' : (s === 'warn' ? 'Leichte Netzbelastung - Spannung weicht von 230V ab' : 'Netzspannung stabil'),
       voltOverloaded: 'Überlastet', voltUnderloaded: 'Unterlastet',
       monthlyCostsTitle: 'Kosten pro Monat',
@@ -5067,6 +5111,79 @@
   }
   setInterval(refreshServerSettingsFromServer, 15000);
 
+  // ============ Buienradar-tegel (sinds 3.82) ============
+  // Home Assistant (de Buienradar-integratie, entity weather.buienradar)
+  // zet elke 10 minuten de buitentemperatuur, de huidige conditie en een
+  // regenverwachting (in minuten vanaf nu, of null als het droog blijft)
+  // in Supabase (tabel weather_status) - zie de automatisering
+  // "Buienradar naar Supabase pushen". Dezelfde sessie-token-aanpak
+  // (ensureValidSession) als de rest van de app. Het radarkaartje zelf
+  // loopt hier buiten om (live, publiek beeld van buienradar.nl, zie de
+  // <img> in de HTML).
+  let lastWeatherData = null;
+
+  function weatherIconSvg(condition){
+    const c = condition || '';
+    if (/lightning/.test(c)) {
+      return '<svg viewBox="0 0 24 24" fill="none"><path d="M6 15a4 4 0 0 1 .4-7.98A5.5 5.5 0 0 1 17 8.5 4 4 0 0 1 17 16H7a4 4 0 0 1-1-1z" fill="currentColor" opacity=".55"/><path d="M13 14l-3 5h2.5l-1 3 3.5-5H12.5l1-3z" fill="currentColor"/></svg>';
+    }
+    if (/rain|pour|hail|snow/.test(c)) {
+      return '<svg viewBox="0 0 24 24" fill="none"><path d="M6 15a4 4 0 0 1 .4-7.98A5.5 5.5 0 0 1 17 8.5 4 4 0 0 1 17 16H7a4 4 0 0 1-1-1z" fill="currentColor" opacity=".55"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 18l-1 3M12 18l-1 3M16 18l-1 3"/></g></svg>';
+    }
+    if (/fog/.test(c)) {
+      return '<svg viewBox="0 0 24 24" fill="none"><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9h16M4 13h16M4 17h10"/></g></svg>';
+    }
+    if (/partlycloudy/.test(c)) {
+      return '<svg viewBox="0 0 24 24" fill="none"><circle cx="8" cy="9" r="4" fill="currentColor"/><path d="M11 18a4 4 0 0 1 .3-7.98A5.5 5.5 0 0 1 21 11.5 4 4 0 0 1 21 19H12a4 4 0 0 1-1-1z" fill="currentColor" opacity=".7"/></svg>';
+    }
+    if (/cloudy/.test(c)) {
+      return '<svg viewBox="0 0 24 24" fill="none"><path d="M6 16a4 4 0 0 1 .4-7.98A5.5 5.5 0 0 1 17 9.5 4 4 0 0 1 17 17H7a4 4 0 0 1-1-1z" fill="currentColor"/></svg>';
+    }
+    if (/clear-night/.test(c)) {
+      return '<svg viewBox="0 0 24 24" fill="none"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" fill="currentColor"/></svg>';
+    }
+    // sunny / windy / onbekend
+    return '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="5" fill="currentColor"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1v3M12 20v3M1 12h3M20 12h3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></g></svg>';
+  }
+
+  // Los van de data-fetch zodat een taalwissel de tekst opnieuw kan opbouwen
+  // zonder opnieuw bij Supabase te moeten langs.
+  function renderWeatherForecastText(){
+    if (!lastWeatherData) return;
+    const el = $('weerForecast');
+    if (!el) return;
+    const mins = lastWeatherData.rain_expected_in_min;
+    if (mins === null || mins === undefined) {
+      el.textContent = t().weatherDry;
+    } else if (mins <= 5) {
+      el.textContent = t().weatherNow;
+    } else {
+      const until = new Date(Date.now() + mins * 60000);
+      const hhmm = String(until.getHours()).padStart(2, '0') + ':' + String(until.getMinutes()).padStart(2, '0');
+      el.textContent = t().weatherUntil(hhmm);
+    }
+  }
+
+  async function refreshWeatherStatus(){
+    try {
+      await ensureValidSession();
+      const res = await fetch(DEFAULT_SUPABASE_URL + '/rest/v1/weather_status?select=*&id=eq.true', {
+        headers: { 'apikey': DEFAULT_SUPABASE_KEY, 'Authorization': 'Bearer ' + (authAccessToken || DEFAULT_SUPABASE_KEY) }
+      });
+      if (!res.ok) return;
+      const rows = await res.json();
+      if (!rows.length) return;
+      const r = rows[0];
+      lastWeatherData = { outside_temp_c: r.outside_temp_c, condition: r.condition, rain_expected_in_min: r.rain_expected_in_min };
+      if ($('weerTemp')) $('weerTemp').textContent = (r.outside_temp_c !== null && r.outside_temp_c !== undefined) ? fmt(r.outside_temp_c, 1) : '—';
+      const iconEl = $('weerIcon');
+      if (iconEl) iconEl.innerHTML = weatherIconSvg(r.condition);
+      renderWeatherForecastText();
+    } catch (e) { /* stil negeren, volgende ronde weer geprobeerd */ }
+  }
+  refreshWeatherStatus();
+  setInterval(refreshWeatherStatus, 600000); // elke 10 minuten - zelfde ritme als de HA-automatisering
+
   // Verbruikslog, Storingslog en "dag met hoogste verbruik" worden bewust
   // NIET meer automatisch/periodiek ververst (dat kostte onnodig accu/data op
   // een telefoon die het tabblad gewoon open laat staan) - alleen bij het
@@ -5223,17 +5340,14 @@
     updateCard(d.active_power_l3_w, 'l3Power', 'l3Sub', 'cardL3', true, 'l3BarDim', 'l3BarMarker');
     updateMeterModal(d); // houd de vergrote popup (indien open) live in sync
 
+    // Sinds 3.82: V/A worden niet meer getoond onder de staafmeters zelf
+    // (alleen nog in de vergrote popup, zie updateMeterModal hierboven) -
+    // de spanningsbewaking (voor het bliksem-icoontje) blijft wel gewoon
+    // draaien.
     const l1VoltageVal = d.active_voltage_l1_v !== undefined ? d.active_voltage_l1_v : d.active_voltage_v;
-    $('l1Voltage').textContent = l1VoltageVal !== undefined ? fmt(l1VoltageVal, 1) : '—';
     updateVoltageBolt('l1Bolt', l1VoltageVal);
-    $('l2Voltage').textContent = d.active_voltage_l2_v !== undefined ? fmt(d.active_voltage_l2_v, 1) : '—';
     updateVoltageBolt('l2Bolt', d.active_voltage_l2_v);
-    $('l3Voltage').textContent = d.active_voltage_l3_v !== undefined ? fmt(d.active_voltage_l3_v, 1) : '—';
     updateVoltageBolt('l3Bolt', d.active_voltage_l3_v);
-
-    $('l1Current').textContent = d.active_current_l1_a !== undefined ? fmt(d.active_current_l1_a, 1) : (d.active_current_a !== undefined ? fmt(d.active_current_a, 1) : '—');
-    $('l2Current').textContent = d.active_current_l2_a !== undefined ? fmt(d.active_current_l2_a, 1) : '—';
-    $('l3Current').textContent = d.active_current_l3_a !== undefined ? fmt(d.active_current_l3_a, 1) : '—';
 
     const totalImport = d.total_power_import_kwh !== undefined ? d.total_power_import_kwh :
       ((d.total_power_import_t1_kwh || 0) + (d.total_power_import_t2_kwh || 0) + (d.total_power_import_t3_kwh || 0) + (d.total_power_import_t4_kwh || 0));
@@ -5688,9 +5802,13 @@
     if ($('colMonthElec')) $('colMonthElec').textContent = d.colMonthElec;
     if ($('colMonthTotal')) $('colMonthTotal').textContent = d.colMonthTotal;
     if (typeof loadMonthlyCosts === 'function') loadMonthlyCosts();
-    $('l1Label').textContent = d.phase(1);
-    $('l2Label').textContent = d.phase(2);
-    $('l3Label').textContent = d.phase(3);
+    // Sinds 3.82: op de homepagina alleen nog "L1"/"L2"/"L3" (geen "Fase x"
+    // meer, en geen vertaling nodig) - de Storingen-pagina hieronder
+    // (fL1Label e.v.) toont nog wel de volledige "Fase x (Lx)"-tekst via
+    // d.phase(n), dat blijft ongewijzigd.
+    $('l1Label').textContent = 'L1';
+    $('l2Label').textContent = 'L2';
+    $('l3Label').textContent = 'L3';
     if ($('thermoLabel')) $('thermoLabel').textContent = d.thermoLabel;
     if ($('thermoSubLabel')) $('thermoSubLabel').textContent = d.thermoSubLabel;
     if ($('thermoCurrentLabel')) $('thermoCurrentLabel').textContent = d.thermoCurrentLabel;
@@ -5699,6 +5817,8 @@
     if ($('thermoModalLabel')) $('thermoModalLabel').textContent = d.thermoLabel;
     if ($('thermoModalSubLabel')) $('thermoModalSubLabel').textContent = d.thermoSubLabel;
     if ($('thermoPopupHint')) $('thermoPopupHint').textContent = d.thermoPopupHint;
+    if ($('weerLabel')) $('weerLabel').textContent = d.weerLabel;
+    renderWeatherForecastText();
     $('fL1Label').textContent = d.phase(1);
     $('fL2Label').textContent = d.phase(2);
     $('fL3Label').textContent = d.phase(3);
